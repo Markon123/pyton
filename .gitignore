@@ -1,0 +1,10 @@
+.local/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+.DS_Store
+*.sqlite3
+playwright-report/
+test-results/

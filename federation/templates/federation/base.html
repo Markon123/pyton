@@ -1,0 +1,62 @@
+{% load static %}<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#172726">
+  <title>{% block title %}{{ page_title|default:"Личный кабинет" }}{% endblock %} · ОренКод</title>
+  <link rel="stylesheet" href="{% static 'federation/app.css' %}">
+  <script defer src="{% static 'federation/app.js' %}"></script>
+</head>
+<body>
+<svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v5m10-5v5M3 11h18m-13 5h2m4 0h2"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m0-16a3 3 0 0 1 0 6m3 3a5 5 0 0 1 3 5v2"/></symbol>
+<symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="m8 12-2 10 6-3 6 3-2-10"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 15l4-5 4 2 5-7"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Zm0 0v6h6M8 13h8m-8 4h6"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9ZM10 21h4"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L20 5"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5v16M3 3c4-1 6 0 9 2 3-2 5-3 9-2v16c-4-1-6 0-9 2-3-2-5-3-9-2V3Z"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H4v16h5m4-14 6 6-6 6m-5-6h11"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+</defs></svg>
+<a class="skip-link" href="#content">Перейти к содержимому</a>
+<div class="sidebar-shade" data-nav-close></div>
+<aside class="sidebar" id="navigation" aria-label="Основная навигация">
+  <a href="{% url 'dashboard' %}" class="brand"><span class="brand-mark">{<b>:</b>}</span><span>орен<span class="brand-lime">код</span><small>ЦИФРОВАЯ ПЛАТФОРМА ФСП</small></span></a>
+  <div class="region-caption"><span class="status-dot"></span> Оренбургская область</div>
+  <div class="nav-caption">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+  <nav class="nav-list">
+    <a class="nav-link {% if nav == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><svg class="icon"><use href="#i-grid"/></svg>Обзор<span class="nav-dot"></span></a>
+    <a class="nav-link {% if nav == 'competitions' %}active{% endif %}" href="{% url 'competitions' %}"><svg class="icon"><use href="#i-calendar"/></svg>Соревнования</a>
+    <a class="nav-link {% if nav == 'registry' %}active{% endif %}" href="{% url 'registry' %}"><svg class="icon"><use href="#i-users"/></svg>Единый реестр</a>
+    <a class="nav-link {% if nav == 'qualifications' %}active{% endif %}" href="{% url 'qualifications' %}"><svg class="icon"><use href="#i-award"/></svg>Разряды и категории</a>
+    <a class="nav-link {% if nav == 'rating' %}active{% endif %}" href="{% url 'rating' %}"><svg class="icon"><use href="#i-chart"/></svg>Рейтинг и сборная</a>
+    {% if active_role == 'federation' %}<a class="nav-link {% if nav == 'reports' %}active{% endif %}" href="{% url 'reports' %}"><svg class="icon"><use href="#i-file"/></svg>Отчёты и документы</a>{% endif %}
+    {% if active_role == 'coach' or active_role == 'athlete' or active_role == 'federation' %}<a class="nav-link {% if nav == 'coaching' %}active{% endif %}" href="{% url 'coaching' %}"><svg class="icon"><use href="#i-users"/></svg>Тренеры и спортсмены</a>{% endif %}
+  </nav>
+  <div class="nav-caption nav-caption-secondary">СЕРВИСЫ</div>
+  <nav class="nav-list">
+    <a class="nav-link {% if nav == 'notifications' %}active{% endif %}" href="{% url 'notifications' %}"><svg class="icon"><use href="#i-bell"/></svg>Уведомления{% if unread_count %}<span class="count">{{ unread_count }}</span>{% endif %}</a>
+    {% if active_role == 'federation' %}<a class="nav-link {% if nav == 'audit' %}active{% endif %}" href="{% url 'audit' %}"><svg class="icon"><use href="#i-file"/></svg>Журнал действий</a>{% endif %}
+    <a class="nav-link {% if nav == 'guide' %}active{% endif %}" href="{% url 'guide' %}"><svg class="icon"><use href="#i-book"/></svg>С чего начать</a>
+  </nav>
+  <div class="sidebar-bottom"><div class="demo-tag">ДЕМОСРЕДА</div><p>Развиваем спортивное<br>программирование вместе.</p><span>Все персональные данные вымышлены</span></div>
+</aside>
+<div class="workspace">
+  <header class="topbar">
+    <div class="topbar-start"><button class="icon-button mobile-menu" type="button" data-nav-toggle aria-controls="navigation" aria-expanded="false" aria-label="Открыть меню"><svg class="icon"><use href="#i-menu"/></svg></button><span class="breadcrumb">Личный кабинет<span>/</span><b>{{ page_title|default:"Обзор" }}</b></span></div>
+    <div class="topbar-actions"><a class="icon-button notification-button" href="{% url 'notifications' %}" aria-label="Уведомления{% if unread_count %}: {{ unread_count }} непрочитанных{% endif %}"><svg class="icon"><use href="#i-bell"/></svg>{% if unread_count %}<i></i>{% endif %}</a><div class="topbar-separator"></div><a href="{% url 'profile' %}" class="user-summary"><span class="avatar">{{ user.get_full_name|default:user.username|slice:":1" }}</span><span class="user-text"><b>{{ user.get_full_name|default:user.username }}</b><small>{{ role_label }}</small></span></a></div>
+  </header>
+  <div class="role-strip"><span><span class="status-dot"></span> Кабинет: <b>{{ role_label }}</b></span><div class="role-controls"><form method="post" action="{% url 'switch_role' %}" class="role-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><label class="sr-only" for="active-role">Активная роль</label><select id="active-role" name="role">{% for value,label in available_roles %}<option value="{{ value }}" {% if active_role == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="text-button" type="submit">Переключить</button></form><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="icon-button" aria-label="Выйти"><svg class="icon"><use href="#i-logout"/></svg></button></form></div></div>
+  <main id="content" class="main-content">
+    {% if messages %}<div class="messages" aria-live="polite">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="page-footer"><span>ОренКод · Федерация спортивного программирования</span><span>Оренбургская область <i><svg class="icon ui-arrow diagonal" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></i></span></footer>
+</div>
+</body></html>
