@@ -15,6 +15,7 @@ class Role(models.TextChoices):
     ATHLETE = 'athlete', 'Спортсмен'
     COACH = 'coach', 'Тренер'
     JUDGE = 'judge', 'Судья'
+    MINISTRY = 'ministry', 'Министерство · чтение'
 
 
 class Discipline(models.Model):
@@ -120,7 +121,7 @@ class Competition(models.Model):
         ('regional', 'Региональное'), ('interregional', 'Межрегиональное'),
         ('russian_championship', 'Чемпионат России'), ('russian_junior', 'Первенство России'),
     ]
-    STATES = [('draft', 'Черновик'), ('open', 'Приём заявок'), ('closed', 'Заявки закрыты'), ('finished', 'Завершено')]
+    STATES = [('draft', 'Черновик'), ('published', 'Опубликовано'), ('open', 'Приём заявок'), ('closed', 'Заявки закрыты'), ('finished', 'Завершено')]
     title = models.CharField('Название', max_length=240)
     description = models.TextField('Описание', blank=True)
     disciplines = models.ManyToManyField(Discipline, related_name='competitions', verbose_name='Дисциплины')
@@ -335,6 +336,13 @@ class Notification(models.Model):
     read = models.BooleanField('Прочитано', default=False)
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     email_sent = models.BooleanField('Email отправлен', default=False)
+    email_delivery_status = models.CharField('Доставка', max_length=12, default='queued', choices=[
+        ('queued', 'В очереди'), ('processing', 'Отправляется'), ('local', 'Локальная почта'),
+        ('sent', 'Принято SMTP'), ('failed', 'Ошибка'), ('skipped', 'Нет адреса'),
+    ])
+    email_attempts = models.PositiveIntegerField('Попытки', default=0)
+    email_last_error = models.CharField('Последняя ошибка', max_length=240, blank=True)
+    email_next_retry_at = models.DateTimeField('Следующая попытка', null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at', '-id']
@@ -376,3 +384,34 @@ class RatingRule(models.Model):
 
     def __str__(self):
         return f'{self.get_level_display()}: {self.first}/{self.second}/{self.third}'
+
+
+class DictionaryEntry(models.Model):
+    KINDS = [('competition_type', 'Тип соревнования'), ('age_group', 'Возрастная группа'),
+             ('rank', 'Разряд'), ('category', 'Судейская категория'),
+             ('stage', 'Этап подготовки'), ('municipality', 'Муниципалитет')]
+    kind = models.CharField('Справочник', max_length=30, choices=KINDS)
+    code = models.SlugField('Код', max_length=80)
+    label = models.CharField('Название', max_length=200)
+    metadata = models.JSONField('Параметры', default=dict, blank=True)
+    active = models.BooleanField('Действует', default=True)
+
+    class Meta:
+        ordering = ['kind', 'label']
+        constraints = [models.UniqueConstraint(fields=['kind', 'code'], name='unique_dictionary_code')]
+
+    def __str__(self):
+        return self.label
+
+
+class DocumentLayout(models.Model):
+    kind = models.CharField('Вид документа', max_length=30, unique=True, choices=[
+        ('protocol', 'Протокол'), ('team', 'Состав сборной и приказ'), ('athlete', 'История спортсмена'),
+        ('census', 'Численность'), ('consent', 'Согласие'), ('judging-panel', 'Судейская коллегия'), ('judging-history', 'История судейства'),
+    ])
+    heading = models.CharField('Шапка учреждения', max_length=240, blank=True)
+    title_prefix = models.CharField('Префикс заголовка', max_length=100, blank=True)
+    footer = models.CharField('Подпись / примечание', max_length=500, blank=True)
+
+    def __str__(self):
+        return self.get_kind_display()

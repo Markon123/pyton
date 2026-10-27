@@ -28,6 +28,12 @@ CATEGORY_TITLES = (
 )
 
 
+def configured_titles(kind, fallback):
+    from .models import DictionaryEntry
+    entries = list(DictionaryEntry.objects.filter(kind=kind, active=True).order_by('id'))
+    return [item.label for item in sorted(entries, key=lambda item: item.metadata.get('order') if isinstance(item.metadata.get('order'), int) else item.pk)] if entries else list(fallback)
+
+
 def date_widget():
     return forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'})
 
@@ -71,7 +77,7 @@ class RegistrationForm(UserCreationForm):
     email = forms.EmailField(label='Электронная почта')
     roles = forms.MultipleChoiceField(
         label='Ваши роли', widget=forms.CheckboxSelectMultiple,
-        choices=[choice for choice in Role.choices if choice[0] != Role.FEDERATION],
+        choices=[choice for choice in Role.choices if choice[0] in ('athlete', 'coach', 'judge')],
     )
     birth_date = forms.DateField(label='Дата рождения', widget=date_widget(), validators=[validate_birth_date])
     municipality = forms.CharField(label='Муниципалитет', max_length=120)
@@ -207,6 +213,10 @@ class CompetitionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['state'].choices = [choice for choice in Competition.STATES if choice[0] != 'finished']
+        from .models import DictionaryEntry
+        types = list(DictionaryEntry.objects.filter(kind='competition_type', active=True).values_list('label', 'label'))
+        if types:
+            self.fields['kind'] = forms.ChoiceField(label='Тип', choices=types)
         self.fields['regulation'].help_text = 'PDF или DOCX, до 5 МБ. Для открытия регистрации необходимо положение.'
 
     def clean_regulation(self):
@@ -222,7 +232,7 @@ class CompetitionForm(forms.ModelForm):
         data = super().clean()
         if self.instance.pk and self.instance.protocol_published:
             raise forms.ValidationError('Опубликованное соревнование закрыто для редактирования. Сначала отзовите публикацию протокола.')
-        if data.get('state') == 'open' and not data.get('regulation'):
+        if data.get('state') in ('published', 'open') and not data.get('regulation'):
             self.add_error('regulation', 'Перед открытием регистрации загрузите положение.')
         if data.get('age_max', 0) > 120:
             self.add_error('age_max', 'Укажите возраст не более 120 лет.')
@@ -260,6 +270,9 @@ class ApplicationForm(forms.ModelForm):
             raise forms.ValidationError('Приём заявок закрыт или срок регистрации ещё не наступил.')
         athlete, discipline = data.get('athlete'), data.get('discipline')
         if athlete:
+            from governance.services import active_disqualifications
+            if active_disqualifications().filter(athlete=athlete).exists():
+                self.add_error('athlete', 'Действует решение об отстранении спортсмена.')
             if athlete.disqualified_until and athlete.disqualified_until >= timezone.localdate():
                 self.add_error('athlete', 'Спортсмен отстранён от участия в соревнованиях.')
             age = athlete.age_on(self.competition.starts_on)
@@ -354,6 +367,9 @@ class QualificationForm(forms.Form):
 
     def __init__(self, *args, user, role, **kwargs):
         super().__init__(*args, **kwargs)
+        self.rank_titles = configured_titles('rank', RANK_TITLES)
+        self.category_titles = configured_titles('category', CATEGORY_TITLES)
+        self.fields['requested_title'].choices = [('Разряды', [(v, v) for v in self.rank_titles]), ('Судейские категории', [(v, v) for v in self.category_titles])]
         self.user, self.role = user, role
         candidates = Profile.objects.filter(status='active')
         if role in (Role.ATHLETE, Role.JUDGE):
@@ -386,7 +402,7 @@ class QualificationForm(forms.Form):
                 self.add_error('athlete', 'Для получения категории требуется роль судьи.')
             if result:
                 self.add_error('result', 'В заявке на категорию результат спортсмена не используется.')
-            if title and title not in CATEGORY_TITLES:
+            if title and title not in self.category_titles:
                 self.add_error('requested_title', 'Для судьи выберите судейскую категорию.')
         elif kind == 'rank':
             if self.role not in (Role.ATHLETE, Role.COACH, Role.FEDERATION):
@@ -403,7 +419,7 @@ class QualificationForm(forms.Form):
                     self.add_error('athlete', 'У вас есть действующий тренер по этой дисциплине. Заявку на разряд подаёт тренер.')
                 if self.role == Role.COACH and not links.filter(coach__user=self.user).exists():
                     self.add_error('result', 'Нет подтверждённой тренерской связи по дисциплине этого результата.')
-            if title and title not in RANK_TITLES:
+            if title and title not in self.rank_titles:
                 self.add_error('requested_title', 'Для спортсмена выберите спортивный разряд.')
         if athlete and kind and title:
             duplicate = RankApplication.objects.filter(athlete=athlete, kind=kind, requested_title=title, status='pending')

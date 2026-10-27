@@ -15,6 +15,12 @@ def navigation(request):
               'qualifications': 'Разряды и категории', 'rating': 'Рейтинг и сборная',
               'reports': 'Отчёты и документы', 'coaching': 'Тренеры и спортсмены',
               'notifications': 'Уведомления', 'audit': 'Журнал действий', 'profile': 'Мой профиль', 'guide': 'С чего начать'}
+    namespace = request.resolver_match.namespace if request.resolver_match else ''
+    module_labels = {'training': 'Группы и нормативы', 'identity': 'ФСП ID', 'integrations': 'API и интеграции',
+                     'governance': 'Федерация и министерство', 'development': 'Развитие и документы'}
+    if namespace in module_labels:
+        nav = namespace
+        labels[nav] = module_labels[namespace]
     return {
         'active_role': role,
         'role_label': dict(Role.choices).get(role, ''),

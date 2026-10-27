@@ -1,0 +1,13 @@
+.git
+docs/demo.webm
+.local
+.venv
+venv
+__pycache__
+**/__pycache__
+*.pyc
+.env
+*.sqlite3
+*.zip
+node_modules
+.github

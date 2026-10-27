@@ -14,6 +14,9 @@ def active_role(request):
         roles = request.user.profile.roles
     except Profile.DoesNotExist:
         return None
+    explicit = getattr(request, 'active_role', None)
+    if explicit in roles:
+        return explicit
     selected = request.session.get('active_role')
     return selected if selected in roles else (roles[0] if roles else None)
 
@@ -38,6 +41,8 @@ def role_profiles(role):
 
 def managed_profiles(request):
     role = active_role(request)
+    if role == Role.MINISTRY:
+        return Profile.objects.none()
     if role == Role.FEDERATION:
         return Profile.objects.all()
     if role == Role.COACH:

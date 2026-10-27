@@ -1,0 +1,7 @@
+<div class="tab-row">
+{% if active_role == 'federation' or active_role == 'ministry' %}<a class="tab" href="{% url 'development:index' %}">Показатели региона</a>{% endif %}
+{% if active_role == 'federation' or active_role == 'athlete' or active_role == 'coach' %}<a class="tab" href="{% url 'development:pathway' %}">Путь спортсмена</a><a class="tab" href="{% url 'development:certificates' %}">Справки с QR</a>{% endif %}
+{% if active_role == 'federation' or active_role == 'coach' %}<a class="tab" href="{% url 'development:candidates' %}">Кандидаты на разряд</a>{% endif %}
+{% if active_role == 'federation' %}<a class="tab" href="{% url 'development:criteria' %}">Критерии</a>{% endif %}
+{% if active_role == 'federation' or active_role == 'judge' or active_role == 'ministry' %}<a class="tab" href="{% url 'development:judging' %}">Документы о судействе</a>{% endif %}
+</div>

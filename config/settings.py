@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import urlsplit, unquote, parse_qs
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 LOCAL_DIR = BASE_DIR / '.local'
@@ -13,11 +14,15 @@ CSRF_TRUSTED_ORIGINS = [s for s in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').
 INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles', 'federation',
+    'oauth2_provider', 'identity', 'rest_framework', 'rest_framework_simplejwt.token_blacklist',
+    'integrations', 'training', 'governance', 'development', 'reporting',
 ]
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware', 'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.security.SecurityMiddleware', 'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware', 'django.contrib.messages.middleware.MessageMiddleware',
+    'federation.middleware.MinistryReadOnlyMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 ROOT_URLCONF = 'config.urls'
@@ -29,6 +34,15 @@ TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates', 'DIR
 WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': os.getenv('DATABASE_PATH', str(LOCAL_DIR / 'db.sqlite3')),
                          'OPTIONS': {'timeout': 20}}}
+if os.getenv('DATABASE_URL'):
+    database = urlsplit(os.environ['DATABASE_URL'])
+    if database.scheme not in ('postgres', 'postgresql'):
+        raise RuntimeError('DATABASE_URL must be a PostgreSQL URL.')
+    DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql', 'NAME': unquote(database.path.lstrip('/')),
+        'USER': unquote(database.username or ''), 'PASSWORD': unquote(database.password or ''),
+        'HOST': database.hostname or 'localhost', 'PORT': database.port or 5432, 'CONN_MAX_AGE': 60,
+        'OPTIONS': {k: v[-1] for k, v in parse_qs(database.query).items() if k in ('sslmode', 'connect_timeout')},
+    }}
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -65,3 +79,18 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+STORAGES = {'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+            'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage' if DEBUG else 'whitenoise.storage.CompressedManifestStaticFilesStorage'}}
+PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL', '').rstrip('/')
+INTEGRATION_WEBHOOK_ALLOWED_HOSTS = [x.strip() for x in os.getenv('INTEGRATION_WEBHOOK_ALLOWED_HOSTS', '').split(',') if x.strip()]
+SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', '0' if DEBUG else '1') == '1'
+SECURE_REDIRECT_EXEMPT = [r'^health/$']
+SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+# Set this only when a trusted reverse proxy strips client-supplied forwarded headers.
+if os.getenv('TRUST_PROXY_HEADERS', '0') == '1':
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+from identity.config import oauth_settings
+from integrations.settings import REST_FRAMEWORK, SIMPLE_JWT
+OAUTH2_PROVIDER = oauth_settings(LOCAL_DIR, DEBUG)

@@ -44,3 +44,6 @@
 .guide-banner-arrow .icon { width:30px; height:30px; }
 .rank-symbol .icon, .empty-check .icon { width:30px; height:30px; }
 .formula-symbol .icon { width:28px; height:28px; }
+
+/* Expanded modules */
+.nav-modules{margin:18px 0}.nav-modules summary{cursor:pointer;list-style:none}.nav-modules summary::after{content:" +";float:right}.nav-modules[open] summary::after{content:" −"}.sidebar{overflow-y:auto}.nav-modules .nav-link{padding:10px 15px;font-size:12px}.stat-card strong{overflow-wrap:anywhere}.table-scroll{max-width:100%}.panel form textarea{max-width:100%}

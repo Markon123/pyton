@@ -21,7 +21,7 @@ from .forms import (ApplicationForm, CoachLinkForm, CompetitionForm, FederationP
 from .models import (Application, AuditLog, CoachLink, Competition, Consent, Discipline,
                      JudgeAssignment, Notification, Organization, Profile, RankApplication,
                      RatingRule, Result, Role, Team)
-from .services import audit, calculate_rating, census, integer, notify
+from .services import audit, calculate_rating, census, census_breakdown, integer, notify, layout_document
 
 
 def form_page(request, form, title, cancel='dashboard', status=200):
@@ -70,6 +70,8 @@ def switch_role(request):
 @login_required
 def dashboard(request):
     role, today = active_role(request), timezone.localdate()
+    if role == 'ministry':
+        return redirect('governance:ministry')
     people = managed_profiles(request)
     visible = competitions_for(request)
     upcoming = visible.filter(starts_on__gte=today).order_by('starts_on')[:4]
@@ -120,6 +122,12 @@ def competitions(request):
     if request.GET.get('age', '').isdigit():
         age = integer(request.GET['age'], 18, 0, 120)
         qs = qs.filter(age_min__lte=age, age_max__gte=age)
+    if request.GET.get('plan') in ('regional', 'ekp'):
+        qs = qs.filter(calendar_plan=request.GET['plan'])
+    if request.GET.get('eligible') == '1' and active_role(request) == 'athlete':
+        person = request.user.profile
+        ids = [c.pk for c in qs if person.age_on(c.starts_on) is not None and c.age_min <= person.age_on(c.starts_on) <= c.age_max and c.disciplines.filter(pk__in=person.disciplines.all()).exists()]
+        qs = qs.filter(pk__in=ids)
     return render(request, 'federation/competitions.html', {'competitions': qs.distinct(), 'disciplines': Discipline.objects.all()})
 
 
@@ -135,8 +143,9 @@ def competition_create(request):
 
 
 @roles_required('federation')
+@transaction.atomic
 def competition_edit(request, pk):
-    comp = get_object_or_404(Competition, pk=pk)
+    comp = get_object_or_404(Competition.objects.select_for_update(), pk=pk)
     if comp.protocol_published:
         raise PermissionDenied('Опубликованный протокол фиксирует данные соревнования.')
     form = CompetitionForm(request.POST or None, request.FILES or None, instance=comp)
@@ -176,7 +185,7 @@ def competition_action(request, pk):
     if comp.protocol_published:
         error = 'Протокол уже опубликован; результаты зафиксированы.'
     elif action in ('open', 'reopen'):
-        if comp.state not in ('draft', 'closed'):
+        if comp.state not in ('draft', 'published', 'closed'):
             error = 'Регистрацию можно открыть из черновика или после закрытия.'
         elif not comp.regulation:
             error = 'Сначала загрузите положение соревнования.'
@@ -184,6 +193,11 @@ def competition_action(request, pk):
             error = 'Срок регистрации истёк. Обновите даты соревнования.'
         else:
             comp.state = 'open'
+    elif action == 'publish_competition' and comp.state == 'draft':
+        if not comp.regulation:
+            error = 'Для публикации загрузите положение.'
+        else:
+            comp.state = 'published'
     elif action == 'close' and comp.state == 'open':
         comp.state = 'closed'
     elif action == 'publish' and comp.state == 'closed':
@@ -208,7 +222,10 @@ def competition_action(request, pk):
             for person in role_profiles('athlete').filter(disciplines__in=comp.disciplines.all(), status='active').distinct():
                 notify(person.user, 'Открыта регистрация', comp.title, reverse('competition_detail', args=[pk]))
         messages.success(request, 'Состояние соревнования обновлено.')
-    return redirect('competition_detail', pk=pk)
+    response = redirect('competition_detail', pk=pk)
+    if error:
+        response['X-Action-Error'] = 'invalid_transition'
+    return response
 
 
 @require_POST
@@ -268,8 +285,9 @@ def result_save(request, pk):
 
 @require_POST
 @roles_required('federation')
+@transaction.atomic
 def judge_assign(request, pk):
-    comp = get_object_or_404(Competition, pk=pk)
+    comp = get_object_or_404(Competition.objects.select_for_update(), pk=pk)
     if comp.protocol_published:
         raise PermissionDenied
     form = JudgeAssignmentForm(request.POST, competition=comp)
@@ -309,6 +327,18 @@ def registry(request):
         qs = qs.filter(organization=request.GET['org'])
     if request.GET.get('status') in ('active', 'archived'):
         qs = qs.filter(status=request.GET['status'])
+    if request.GET.get('municipality'):
+        qs = qs.filter(municipality__icontains=request.GET['municipality'])
+    if request.GET.get('rank'):
+        qs = qs.filter(rank_applications__kind='category' if kind == 'judge' else 'rank', rank_applications__status='approved', rank_applications__valid_until__gte=timezone.localdate(), rank_applications__requested_title=request.GET['rank'])
+    ids = []
+    for p in qs:
+        if request.GET.get('age_min', '').isdigit() and (p.age is None or p.age < int(request.GET['age_min'])):
+            continue
+        if request.GET.get('age_max', '').isdigit() and (p.age is None or p.age > int(request.GET['age_max'])):
+            continue
+        ids.append(p.pk)
+    qs = qs.filter(pk__in=ids).distinct()
     return render(request, 'federation/registry.html', {'profiles': qs.prefetch_related('disciplines'),
                   'disciplines': Discipline.objects.all(), 'organizations': organizations, 'kind': kind})
 
@@ -503,7 +533,9 @@ def team_create(request):
     team.members.set(ids)
     audit(request, 'Сформирована сборная', f'team:{team.pk}', f'{season}, {disc.name}, {len(set(ids))} участников')
     messages.success(request, 'Состав сохранён. Документы доступны для скачивания.')
-    return redirect(f'{reverse("rating")}?season={season}&discipline={discipline}')
+    response = redirect(f'{reverse("rating")}?season={season}&discipline={discipline}')
+    response['X-Created-Object'] = str(team.pk)
+    return response
 
 
 @require_POST
@@ -536,12 +568,20 @@ def census_filters(request):
     return start, end, discipline, org
 
 
-@roles_required('federation')
+def census_extra(request):
+    return {'age_min': integer(request.GET.get('age_min'), None, 0, 120),
+            'age_max': integer(request.GET.get('age_max'), None, 0, 120),
+            'municipality': request.GET.get('municipality', '').strip() or None}
+
+
+@roles_required('federation', 'ministry')
 def reports(request):
     start, end, disc, org = census_filters(request)
-    counts = census(start, end, disc, org)
+    extra = census_extra(request)
+    counts = census(start, end, disc, org, **extra)
     return render(request, 'federation/reports.html', {'counts': counts, 'disciplines': Discipline.objects.all(),
                   'organizations': Organization.objects.all(), 'year_from': start, 'year_to': end,
+                  'breakdown': census_breakdown(start, end, disc, org, **extra),
                   'stats': {'max_count': max([x['total'] for x in counts] + [1])}})
 
 
@@ -556,7 +596,7 @@ def export_document(request, kind, pk, fmt):
                  str(r.application.athlete.organization or 'Без организации'), r.score] for r in results]
         subtitle = f'{comp.starts_on:%d.%m.%Y} · {comp.location} · {comp.get_level_display()}'
     elif kind == 'team':
-        if role != 'federation':
+        if role not in ('federation', 'ministry'):
             raise PermissionDenied
         team = get_object_or_404(Team, pk=pk)
         title, headers = f'Сборная региона · {team.season}', ['№', 'Спортсмен', 'Организация', 'Дисциплина']
@@ -571,12 +611,14 @@ def export_document(request, kind, pk, fmt):
         rows = [[r.application.competition.starts_on, r.application.competition.title, r.application.discipline.name, r.place, r.score] for r in results_for(person)]
         subtitle = 'Источник: опубликованные протоколы соревнований платформы.'
     elif kind == 'census':
-        if role != 'federation':
+        if role not in ('federation', 'ministry'):
             raise PermissionDenied
         start, end, disc, org = census_filters(request)
-        title, headers = 'Динамика численности занимающихся', ['Год', 'Число спортсменов']
-        rows = [[r['year'], r['total']] for r in census(start, end, disc, org)]
-        subtitle = 'Источник: интервалы занятий (год начала–окончания) в реестре. Дисциплина и организация соответствуют текущей записи, исторические переходы не моделируются.'
+        title, headers = 'Динамика численности занимающихся', ['Год', 'Разрез', 'Группа', 'Число спортсменов']
+        extra = census_extra(request)
+        rows = [[r['year'], 'Всего', 'Регион', r['total']] for r in census(start, end, disc, org, **extra)]
+        rows.extend([[r['year'], r['dimension'], r['label'], r['total']] for r in census_breakdown(start, end, disc, org, **extra)])
+        subtitle = 'Источник: история зачислений в группы; для записей без истории — интервалы занятий реестра. Возраст на 31 декабря отчётного года. В итогах спортсмен учитывается один раз; суммы разрезов могут пересекаться.'
     elif kind == 'consent':
         consent = get_object_or_404(Consent, pk=pk)
         if consent.user_id != request.user.pk and role != 'federation':
@@ -586,6 +628,7 @@ def export_document(request, kind, pk, fmt):
         subtitle = 'Демонстрационная запись о согласии, не юридический шаблон.'
     else:
         raise Http404
+    title, subtitle = layout_document(kind, title, subtitle)
     return build_document(kind, fmt, title, headers, rows, subtitle)
 
 
@@ -608,9 +651,11 @@ def audit_log(request):
     return render(request, 'federation/audit.html', {'events': AuditLog.objects.select_related('user')[:200]})
 
 
-@login_required
 def guide(request):
-    return render(request, 'federation/guide.html', {'disciplines': Discipline.objects.all()})
+    return render(request, 'federation/guide.html', {'disciplines': Discipline.objects.all(),
+        'public_parent': 'federation/base.html' if request.user.is_authenticated else 'federation/public_base.html',
+        'organizations': Organization.objects.all(),
+        'upcoming': Competition.objects.exclude(state='draft').filter(starts_on__gte=timezone.localdate())[:6]})
 
 
 def health(request):

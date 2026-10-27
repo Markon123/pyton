@@ -53,7 +53,9 @@ def main():
                 raise RuntimeError(f'Команда {Path(command[0]).name} завершилась с кодом {code}. См. сообщение выше.')
 
         server = None
+        scheduler = None
         output = None
+        scheduler_output = None
         try:
             say(f'\nОренКод · запуск {datetime.now():%Y-%m-%d %H:%M:%S}')
             try:
@@ -79,8 +81,8 @@ def main():
             say('Устанавливаю зависимости. При первом запуске нужен интернет…')
             run(str(python), '-m', 'pip', 'install', '--disable-pip-version-check', '-r', str(ROOT / 'requirements.txt'))
             say('Подготавливаю базу и вымышленные демонстрационные данные…')
-            for command in ('migrate', 'seed_demo', 'check', 'send_reminders'):
-                extra = ['--noinput'] if command == 'migrate' else []
+            for command in ('migrate', 'prepare_project', 'seed_full_demo', 'collectstatic', 'check', 'send_reminders'):
+                extra = ['--noinput'] if command in ('migrate', 'collectstatic') else []
                 run(str(python), 'manage.py', command, *extra)
             if args.check_only:
                 say('Настройка и проверка завершены успешно. Для открытия сайта запустите файл ещё раз без --check-only.')
@@ -91,6 +93,11 @@ def main():
                                       text=True, encoding='utf-8', errors='replace')
             output = threading.Thread(target=stream, args=(server,), daemon=True)
             output.start()
+            scheduler = subprocess.Popen([str(python), 'manage.py', 'run_scheduler', '--interval=60'],
+                                         cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                         text=True, encoding='utf-8', errors='replace')
+            scheduler_output = threading.Thread(target=stream, args=(scheduler,), daemon=True)
+            scheduler_output.start()
             # These URLs are used locally by this launcher, never as cloud previews.
             base_url = f'http://127.0.0.1:{port}'
             opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -131,8 +138,12 @@ def main():
         finally:
             if server is not None:
                 stop(server)
+            if scheduler is not None:
+                stop(scheduler)
             if output is not None:
                 output.join(timeout=2)
+            if scheduler_output is not None:
+                scheduler_output.join(timeout=2)
 
 
 def stop(process):

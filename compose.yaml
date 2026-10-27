@@ -1,0 +1,72 @@
+name: orenkod
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orenkod
+      POSTGRES_USER: orenkod
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-demo-local-postgres-only}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orenkod -d orenkod"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  app:
+    build: .
+    image: orenkod:local
+    init: true
+    environment: &app_environment
+      DATABASE_URL: postgresql://orenkod:${POSTGRES_PASSWORD:-demo-local-postgres-only}@db:5432/orenkod
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-demo-only-compose-do-not-use-in-production}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,app}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8000}
+      FSP_SEED_DEMO: ${FSP_SEED_DEMO:-0}
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.filebased.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-1}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-ОренКод <noreply@orenkod.example>}
+      INTEGRATION_WEBHOOK_ALLOWED_HOSTS: ${INTEGRATION_WEBHOOK_ALLOWED_HOSTS:-}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-0}
+    volumes:
+      - app_data:/app/.local
+    ports:
+      - "127.0.0.1:${FSP_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    restart: unless-stopped
+  scheduler:
+    image: orenkod:local
+    init: true
+    command: ["python", "manage.py", "run_scheduler", "--interval=60"]
+    environment:
+      <<: *app_environment
+      FSP_SKIP_MIGRATIONS: '1'
+    volumes:
+      - app_data:/app/.local
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles: ["mail"]
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  app_data:

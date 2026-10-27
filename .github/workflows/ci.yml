@@ -1,0 +1,60 @@
+name: Validate OrenKod
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  sqlite:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py migrate --noinput
+      - run: python manage.py seed_demo
+      - run: python manage.py setup_identity
+      - run: python manage.py seed_training
+      - run: python manage.py seed_governance
+      - run: python manage.py seed_development
+      - run: python manage.py test --verbosity=2
+      - run: python scripts/launch_demo.py --check-only
+      - run: python manage.py backup_database --output .local/ci-sqlite-backup.sqlite3
+  postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: orenkod
+          POSTGRES_USER: orenkod
+          POSTGRES_PASSWORD: ci-ephemeral-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U orenkod -d orenkod"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://orenkod:ci-ephemeral-only@127.0.0.1:5432/orenkod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python manage.py migrate --noinput
+      - run: python manage.py seed_demo
+      - run: python manage.py setup_identity
+      - run: python manage.py seed_training
+      - run: python manage.py seed_governance
+      - run: python manage.py seed_development
+      - run: python manage.py test --verbosity=2
