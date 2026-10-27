@@ -28,10 +28,13 @@ def person_for(request):
     return people, person
 
 
-def results_for_request(request):
+def results_for_request(request, *, include_ineligible=False):
+    from governance.services import valid_results
     role = active_role(request)
     qs = Result.objects.filter(application__status='approved', application__competition__protocol_published=True).select_related(
         'application__athlete__user', 'application__competition', 'application__discipline')
+    if not include_ineligible:
+        qs = valid_results(qs)
     if role == 'federation':
         return qs
     if role == 'athlete':
@@ -132,7 +135,7 @@ def evidence_download(request, pk):
 def certificates(request):
     results = results_for_request(request)
     form = CertificateForm(results=results)
-    certificates = ParticipationCertificate.objects.filter(result__in=results).select_related(
+    certificates = ParticipationCertificate.objects.filter(result__in=results_for_request(request, include_ineligible=True)).select_related(
         'result__application__athlete__user', 'result__application__competition', 'result__application__discipline')
     return render(request, 'development/certificates.html', {'form': form, 'certificates': certificates})
 

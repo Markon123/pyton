@@ -223,3 +223,10 @@ class APIIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.comp.refresh_from_db()
         self.assertEqual(self.comp.state, 'open')
+
+    def test_dictionary_api_rejects_non_object_metadata(self):
+        from federation.models import DictionaryEntry
+        client, _ = self.auth(self.fed)
+        response = client.post('/api/v1/dictionaries/entries/', {'kind':'rank','code':'invalid-json','label':'Некорректный','metadata':['not-object'],'active':True}, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(DictionaryEntry.objects.filter(code='invalid-json').exists())

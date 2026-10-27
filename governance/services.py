@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 from django.utils import timezone
 
 from federation.models import CoachLink, Competition, Profile, Result
@@ -13,6 +14,30 @@ from .models import Appeal, AwardPetition, AwardRule, ProtocolAmendment, Violati
 def active_disqualifications(day=None):
     day = day or timezone.localdate()
     return ViolationRecord.objects.filter(decision='disqualification', status='confirmed', starts_on__lte=day, ends_on__gte=day)
+
+
+def valid_results(queryset, on_date=None, *, exclude_active_disqualified=False):
+    """Published results not voided by an effective, confirmed decision.
+
+    A competition-specific technical defeat/disqualification invalidates that
+    performance after its effective date, until the decision is overturned.
+    Its expiry ends a suspension; it does not restore the invalid performance.
+    Current candidate/ranking workflows can additionally exclude athletes with
+    an active global suspension. Historical participation certificates and awards
+    remain scoped to their source competition, rather than unrelated later bans.
+    """
+    day = on_date or timezone.localdate()
+    voided = ViolationRecord.objects.filter(
+        athlete_id=OuterRef('application__athlete_id'),
+        competition_id=OuterRef('application__competition_id'),
+        status='confirmed', starts_on__lte=day,
+        decision__in=['technical_defeat', 'disqualification'])
+    queryset = queryset.filter(application__status='approved', application__competition__protocol_published=True)
+    queryset = queryset.alias(_governance_result_void=Exists(voided)).filter(_governance_result_void=False)
+    if exclude_active_disqualified:
+        queryset = queryset.exclude(application__athlete_id__in=active_disqualifications(day).values('athlete_id'))
+        queryset = queryset.exclude(application__athlete__disqualified_until__gte=day)
+    return queryset
 
 
 def may_appeal(request, person, competition, discipline=None):
@@ -91,17 +116,16 @@ def record_violation(request, violation):
     return violation
 
 
-def award_candidates(year):
+def award_candidates(year, on_date=None):
     rules = {(r.level, r.place): r for r in AwardRule.objects.filter(active=True)}
     candidates = {}
     results = Result.objects.filter(application__competition__protocol_published=True, application__status='approved',
         application__competition__starts_on__year=year, place__lte=3).select_related('application__athlete__user', 'application__competition', 'application__discipline')
+    results = valid_results(results, on_date)
     for result in results:
         comp, person = result.application.competition, result.application.athlete
         rule = rules.get((comp.level, result.place))
         if not rule:
-            continue
-        if ViolationRecord.objects.filter(athlete=person, competition=comp, status='confirmed', decision__in=['technical_defeat', 'disqualification']).exists():
             continue
         item = {'athlete': person, 'result': result, 'rule': rule, 'amount': rule.amount, 'breakdown': []}
         breakdown = {'competition': comp.title, 'competition_id': comp.pk, 'result_id': result.pk,

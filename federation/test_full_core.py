@@ -80,3 +80,23 @@ class CompleteCoreTests(TestCase):
         content = '\n'.join(p.text for p in document.paragraphs)
         self.assertIn('Мой проверенный заголовок', content)
         self.assertIn('Подписант тестовый', content)
+
+    def test_first_enrollment_preserves_known_legacy_years(self):
+        before = census(2024, 2025)
+        group = TrainingGroup.objects.create(name='Первая группа', organization=self.new_org, discipline=self.discipline, coach=self.person, stage='initial')
+        Enrollment.objects.create(athlete=self.person, group=group, start_date=date(2026, 1, 1), municipality='Оренбург')
+        self.assertEqual(census(2024, 2025), before)
+        self.assertEqual([r['total'] for r in before], [1, 1])
+
+    def test_history_in_one_discipline_keeps_other_legacy_discipline(self):
+        other = Discipline.objects.create(name='Продуктовое', code='product')
+        self.person.disciplines.add(other)
+        group = TrainingGroup.objects.create(name='Алгоритмы 2023', organization=self.new_org, discipline=self.discipline, coach=self.person, stage='initial')
+        Enrollment.objects.create(athlete=self.person, group=group, start_date=date(2023, 1, 1), end_date=date(2024, 12, 31), municipality='Оренбург')
+        self.assertEqual(census(2025, 2025, discipline=other.pk)[0]['total'], 1)
+        self.assertEqual(census(2025, 2025, discipline=self.discipline.pk)[0]['total'], 0)
+
+    def test_invalid_legacy_metadata_does_not_break_rank_choices(self):
+        from federation.forms import configured_titles
+        DictionaryEntry.objects.create(kind='rank', code='old-invalid', label='Тестовый разряд', metadata=['legacy invalid'])
+        self.assertIn('Тестовый разряд', configured_titles('rank', []))

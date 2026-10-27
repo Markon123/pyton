@@ -1,4 +1,5 @@
 .git
+.env.*
 docs/demo.webm
 .local
 .venv

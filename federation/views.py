@@ -431,6 +431,10 @@ def qualification_review(request, pk):
         return HttpResponseBadRequest('Укажите решение и причину отклонения.')
     record.status, record.review_comment = status, comment
     if status == 'approved':
+        if record.kind == 'rank':
+            from governance.services import valid_results
+            if not valid_results(Result.objects.filter(pk=record.result_id), exclude_active_disqualified=True).exists():
+                return HttpResponseBadRequest('Результат или допуск спортсмена утратил действительность. Проверьте решения о нарушениях.')
         try:
             record.assigned_on = parse_date(request.POST.get('assigned_on', ''))
             record.valid_until = parse_date(request.POST.get('valid_until', ''))
@@ -618,7 +622,7 @@ def export_document(request, kind, pk, fmt):
         extra = census_extra(request)
         rows = [[r['year'], 'Всего', 'Регион', r['total']] for r in census(start, end, disc, org, **extra)]
         rows.extend([[r['year'], r['dimension'], r['label'], r['total']] for r in census_breakdown(start, end, disc, org, **extra)])
-        subtitle = 'Источник: история зачислений в группы; для записей без истории — интервалы занятий реестра. Возраст на 31 декабря отчётного года. В итогах спортсмен учитывается один раз; суммы разрезов могут пересекаться.'
+        subtitle = 'Источник: история зачислений в группы; для периодов до начала истории — интервалы занятий реестра. Возраст на 31 декабря отчётного года. В итогах спортсмен учитывается один раз; суммы разрезов могут пересекаться.'
     elif kind == 'consent':
         consent = get_object_or_404(Consent, pk=pk)
         if consent.user_id != request.user.pk and role != 'federation':

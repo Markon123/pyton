@@ -50,7 +50,7 @@ def build_census(job):
     rows = [[r['year'], 'Всего', 'Регион', r['total']] for r in counts]
     rows += [[r['year'], r['dimension'], r['label'], r['total']] for r in split]
     title, subtitle = layout_document('census', 'Динамика численности занимающихся',
-        'Фоновый отчёт. Источник: интервалы зачисления в группы; для записей без истории — интервалы реестра. '
+        'Фоновый отчёт. Источник: интервалы зачисления в группы; для периодов до начала истории — интервалы реестра. '
         'Возраст на 31 декабря отчётного года. Итог считает уникальных спортсменов; разрезы могут пересекаться.')
     # build_document creates document bytes inside this process; no HTTP request or server is used.
     response = build_document('census', job.format, title, ['Год', 'Разрез', 'Группа', 'Число спортсменов'], rows, subtitle)

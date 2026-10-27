@@ -1,0 +1,26 @@
+# Apply after compose.yaml and deployment/compose.production.yaml.
+services:
+  app:
+    environment:
+      TRUST_PROXY_HEADERS: '1'
+  scheduler:
+    environment:
+      TRUST_PROXY_HEADERS: '1'
+  web:
+    image: caddy:2.10-alpine
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?Set the public DNS hostname}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deployment/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  caddy_data:
+  caddy_config:

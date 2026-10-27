@@ -1,13 +1,21 @@
 from django.core.management.base import BaseCommand
-from django.utils.text import slugify
 from federation.forms import RANK_TITLES, CATEGORY_TITLES
-from federation.models import DictionaryEntry, DocumentLayout
+from federation.models import DictionaryEntry, Discipline, DocumentLayout, RatingRule
 
 
 class Command(BaseCommand):
     help = 'Добавить базовые справочники и макеты без изменения существующих записей.'
 
     def handle(self, **options):
+        for code, label in [
+            ('algorithm', 'Программирование алгоритмическое'), ('product', 'Программирование продуктовое'),
+            ('security', 'Системы информационной безопасности'), ('ai', 'Системы искусственного интеллекта'),
+            ('robotics', 'Робототехника'), ('drone', 'Беспилотные авиационные системы'),
+        ]:
+            Discipline.objects.get_or_create(code=code, defaults={'name': label})
+        for level, points in [('regional', (40, 30, 20)), ('interregional', (60, 45, 30)),
+                              ('russian_championship', (100, 80, 60)), ('russian_junior', (80, 60, 40))]:
+            RatingRule.objects.get_or_create(level=level, defaults=dict(zip(['first', 'second', 'third'], points)))
         values = {'competition_type': ['Чемпионат', 'Первенство', 'Кубок', 'Турнир', 'Хакатон'],
                   'rank': RANK_TITLES, 'category': CATEGORY_TITLES,
                   'stage': ['Начальная подготовка', 'Учебно-тренировочный этап', 'Совершенствование спортивного мастерства', 'Высшее спортивное мастерство'],

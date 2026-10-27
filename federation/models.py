@@ -403,6 +403,14 @@ class DictionaryEntry(models.Model):
     def __str__(self):
         return self.label
 
+    def clean(self):
+        super().clean()
+        if not isinstance(self.metadata, dict):
+            raise ValidationError({'metadata': 'Параметры должны быть JSON-объектом.'})
+        order = self.metadata.get('order')
+        if order is not None and (type(order) is not int or order < 0):
+            raise ValidationError({'metadata': 'Порядок должен быть неотрицательным целым числом.'})
+
 
 class DocumentLayout(models.Model):
     kind = models.CharField('Вид документа', max_length=30, unique=True, choices=[

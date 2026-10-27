@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Q, Exists, OuterRef
+from django.db.models import Q, Min
 from django.utils import timezone
 
 from .access import active_role, role_profiles
@@ -61,10 +61,8 @@ def calculate_rating(season, discipline_id=None, age_min=None, age_max=None, min
     results = Result.objects.filter(application__athlete_id__in=people,
                                     application__status='approved', application__competition__protocol_published=True,
                                     application__competition__starts_on__year=season).select_related('application__competition', 'application__discipline')
-    from governance.models import ViolationRecord
-    invalid_result = ViolationRecord.objects.filter(athlete_id=OuterRef('application__athlete_id'),
-        competition_id=OuterRef('application__competition_id'), status='confirmed', starts_on__lte=timezone.localdate(), decision__in=['technical_defeat', 'disqualification'])
-    results = results.annotate(_invalid=Exists(invalid_result)).filter(_invalid=False)
+    from governance.services import valid_results
+    results = valid_results(results)
     if discipline_id:
         results = results.filter(application__discipline_id=discipline_id)
     defaults = {'regional': (40, 30, 20), 'interregional': (60, 45, 30),
@@ -92,8 +90,13 @@ def census_facts(year_from, year_to, discipline=None, organization=None, age_min
     from training.models import Enrollment
     from training.services import participation_rows
     facts = participation_rows(year_from, year_to, discipline, organization, age_min, age_max, municipality)
-    # Historical enrollment facts take priority; do not project today's affiliations into past years.
-    people = role_profiles('athlete').exclude(pk__in=Enrollment.objects.values('athlete_id')).prefetch_related('disciplines')
+    for fact in facts:
+        fact['source'] = 'enrollment'
+    # Keep the known legacy interval before the first recorded enrollment in
+    # each discipline. Once explicit history starts, do not fill subsequent gaps.
+    first_year = {(r['athlete_id'], r['group__discipline_id']): r['first'].year
+                  for r in Enrollment.objects.values('athlete_id', 'group__discipline_id').annotate(first=Min('start_date'))}
+    people = role_profiles('athlete').prefetch_related('disciplines')
     if discipline:
         people = people.filter(disciplines=discipline)
     if organization:
@@ -108,10 +111,12 @@ def census_facts(year_from, year_to, discipline=None, organization=None, age_min
             if age_max is not None and (age is None or age > age_max):
                 continue
             for disc in person.disciplines.all():
+                if year >= first_year.get((person.pk, disc.pk), year_to + 1):
+                    continue
                 if not discipline or disc.pk == int(discipline):
                     facts.append({'year': year, 'athlete_id': person.pk, 'organization_id': person.organization_id,
                                   'discipline_id': disc.pk, 'municipality': person.municipality,
-                                  'stage': '', 'age': age})
+                                  'stage': '', 'age': age, 'source': 'legacy'})
     return facts
 
 

@@ -31,7 +31,11 @@ CATEGORY_TITLES = (
 def configured_titles(kind, fallback):
     from .models import DictionaryEntry
     entries = list(DictionaryEntry.objects.filter(kind=kind, active=True).order_by('id'))
-    return [item.label for item in sorted(entries, key=lambda item: item.metadata.get('order') if isinstance(item.metadata.get('order'), int) else item.pk)] if entries else list(fallback)
+    def order(item):
+        metadata = item.metadata if isinstance(item.metadata, dict) else {}
+        value = metadata.get('order')
+        return value if type(value) is int and value >= 0 else item.pk
+    return [item.label for item in sorted(entries, key=order)] if entries else list(fallback)
 
 
 def date_widget():
@@ -383,6 +387,8 @@ class QualificationForm(forms.Form):
             application__athlete__in=candidates, application__status='approved',
             application__competition__protocol_published=True,
         ).select_related('application__athlete__user', 'application__competition', 'application__discipline')
+        from governance.services import valid_results
+        self.fields['result'].queryset = valid_results(self.fields['result'].queryset, exclude_active_disqualified=True)
         if role == Role.JUDGE:
             self.fields['kind'].choices = [('category', 'Судейская категория')]
             self.fields['kind'].initial = 'category'

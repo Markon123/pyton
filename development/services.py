@@ -20,18 +20,18 @@ def can_access_result(request, result):
                                                     discipline=app.discipline, status='active').exists())
 
 
-def rank_candidates(profile_ids=None):
+def rank_candidates(profile_ids=None, on_date=None):
+    from governance.services import valid_results
     results = Result.objects.filter(application__status='approved', application__competition__protocol_published=True,
                                     application__athlete__status='active').select_related(
         'application__athlete__user', 'application__athlete__organization', 'application__competition', 'application__discipline')
     if profile_ids is not None:
         results = results.filter(application__athlete_id__in=profile_ids)
+    results = valid_results(results, on_date, exclude_active_disqualified=True)
     rules = list(RankCriterion.objects.filter(active=True).select_related('discipline'))
     matches = []
     for result in results:
         athlete = result.application.athlete
-        if athlete.disqualified_until and athlete.disqualified_until >= timezone.localdate():
-            continue
         for rule in rules:
             if rule.matches(result):
                 matches.append({'athlete': athlete, 'result': result, 'criterion': rule})

@@ -97,9 +97,12 @@ class ParticipationCertificate(models.Model):
 
     @property
     def valid(self):
-        return bool(not self.revoked and self.public_consent and self.result.application.status == 'approved'
-                    and self.result.application.competition.protocol_published
-                    and self.fingerprint == result_fingerprint(self.result))
+        if (self.revoked or not self.public_consent or self.result.application.status != 'approved'
+                or not self.result.application.competition.protocol_published
+                or self.fingerprint != result_fingerprint(self.result)):
+            return False
+        from governance.services import valid_results
+        return valid_results(Result.objects.filter(pk=self.result_id)).exists()
 
     @property
     def public_initials(self):

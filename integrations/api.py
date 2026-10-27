@@ -511,9 +511,8 @@ class DictionariesAPI(BaseAPI):
             cls = modelform_factory(Discipline, fields=['name', 'code'])
             record = form_valid(cls(request.data)).save()
         elif kind in ('entries', 'document-layouts'):
-            from django.forms import modelform_factory
-            model = DictionaryEntry if kind == 'entries' else DocumentLayout
-            cls = modelform_factory(model, fields='__all__')
+            from federation.configuration import EntryForm, LayoutForm
+            cls = EntryForm if kind == 'entries' else LayoutForm
             record = form_valid(cls(request.data)).save()
         else:
             raise ValidationError('Для редактирования баллов используйте интерфейс федерации.')
