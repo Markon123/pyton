@@ -15,14 +15,14 @@ INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles', 'federation',
     'oauth2_provider', 'identity', 'rest_framework', 'rest_framework_simplejwt.token_blacklist',
-    'integrations', 'training', 'governance', 'development', 'reporting',
+    'integrations', 'training', 'governance', 'development', 'reporting', 'privacy_requests',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware', 'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware', 'django.contrib.messages.middleware.MessageMiddleware',
-    'federation.middleware.MinistryReadOnlyMiddleware',
+    'federation.middleware.ProvisionedAccountMiddleware', 'federation.middleware.MinistryReadOnlyMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 ROOT_URLCONF = 'config.urls'
@@ -32,7 +32,7 @@ TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates', 'DIR
                   'django.contrib.messages.context_processors.messages', 'federation.context.navigation',
               ]}}]
 WSGI_APPLICATION = 'config.wsgi.application'
-DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': os.getenv('DATABASE_PATH', str(LOCAL_DIR / 'db.sqlite3')),
+DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': os.getenv('DATABASE_PATH', str(LOCAL_DIR / 'platform.sqlite3')),
                          'OPTIONS': {'timeout': 20}}}
 if os.getenv('DATABASE_URL'):
     database = urlsplit(os.environ['DATABASE_URL'])
@@ -65,12 +65,16 @@ LOGOUT_REDIRECT_URL = 'login'
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.filebased.EmailBackend')
 EMAIL_FILE_PATH = LOCAL_DIR / 'mail'
 EMAIL_HOST = os.getenv('EMAIL_HOST', '')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', '0') == '1'
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', '0' if EMAIL_USE_SSL else '1') == '1'
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+    raise RuntimeError('Use either EMAIL_USE_SSL or EMAIL_USE_TLS, not both.')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465' if EMAIL_USE_SSL else '587'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', '1') == '1'
 EMAIL_TIMEOUT = 5
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'ОренКод <noreply@orenkod.example>')
+FSP_DEMO_MODE = os.getenv('FSP_DEMO_MODE', '0') == '1'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = not DEBUG

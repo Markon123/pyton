@@ -9,15 +9,16 @@ def navigation(request):
     nav = current
     if current.startswith(('competition_', 'application_', 'result_', 'judge_', 'regulation_')):
         nav = 'competitions'
-    elif current in ('athlete_detail', 'profile_create', 'profile_edit', 'organization_create'):
+    elif current in ('athlete_detail', 'profile_create', 'profile_edit', 'organization_create', 'organization_detail'):
         nav = 'registry'
     labels = {'dashboard': 'Обзор', 'competitions': 'Соревнования', 'registry': 'Единый реестр',
               'qualifications': 'Разряды и категории', 'rating': 'Рейтинг и сборная',
               'reports': 'Отчёты и документы', 'coaching': 'Тренеры и спортсмены',
-              'notifications': 'Уведомления', 'audit': 'Журнал действий', 'profile': 'Мой профиль', 'guide': 'С чего начать'}
+              'notifications': 'Уведомления', 'audit': 'Журнал действий', 'profile': 'Мой профиль', 'guide': 'С чего начать',
+              'report_deadlines': 'Сроки отчётов', 'mail_status': 'Доставка уведомлений'}
     namespace = request.resolver_match.namespace if request.resolver_match else ''
     module_labels = {'training': 'Группы и нормативы', 'identity': 'ФСП ID', 'integrations': 'API и интеграции',
-                     'governance': 'Федерация и министерство', 'development': 'Развитие и документы'}
+                     'governance': 'Федерация и министерство', 'development': 'Развитие и документы', 'privacy_requests': 'Мои данные'}
     if namespace in module_labels:
         nav = namespace
         labels[nav] = module_labels[namespace]

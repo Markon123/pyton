@@ -1,8 +1,8 @@
 # Развёртывание и резервное копирование
 
-## Локальная демонстрация Docker
+## Локальный запуск Docker
 
-Нужны Docker Engine с Compose v2 и доступ к реестрам образов/PyPI. Все фикстуры вымышлены. Из корня проекта:
+Нужны Docker Engine с Compose v2 и доступ к реестрам образов/PyPI. Обычная установка не создаёт вымышленные записи. Из корня проекта:
 
 ```bash
 docker compose --env-file deployment/demo.env --profile mail up --build -d
@@ -10,7 +10,7 @@ docker compose ps
 docker compose logs --tail=80 app scheduler
 ```
 
-Сервисы: PostgreSQL 16, приложение Gunicorn, планировщик, опциональный SMTP-приёмник Mailpit. Приложение доступно на локальном порту `8000`, почтовый интерфейс — `8025`; наружу эти порты привязаны только к loopback. Это не публикация сайта и не пользовательский облачный preview. При первом старте применяются миграции, собирается статика и создаются демонстрационные данные. Данные PostgreSQL и `.local` приложения лежат в именованных томах. Обычный `docker compose down` их сохраняет; `down -v` удалит данные, поэтому не используйте этот флаг для обычной остановки.
+Сервисы: PostgreSQL 16, приложение Gunicorn, планировщик, опциональный SMTP-приёмник Mailpit. Приложение доступно на локальном порту `8000`, почтовый интерфейс — `8025`; наружу эти порты привязаны только к loopback. Это не публикация сайта и не пользовательский облачный preview. При первом старте применяются миграции, собирается статика, подготавливаются справочники и создаётся единственный главный аккаунт министерства. Данные PostgreSQL и `.local` приложения лежат в именованных томах. Обычный `docker compose down` их сохраняет; `down -v` удалит данные, поэтому не используйте этот флаг для обычной остановки.
 
 Приложение работает непривилегированным Linux-пользователем `app`. `.local` содержит загруженные подтверждения, OIDC-ключ и собранную статику; этот каталог не включается в образ из рабочей машины и не попадает в Git. Вебхуки не отправляются на произвольные URL: отдельный список разрешённых HTTPS-хостов задаётся параметром `INTEGRATION_WEBHOOK_ALLOWED_HOSTS`.
 
@@ -23,7 +23,7 @@ docker compose logs --tail=80 app scheduler
 ```bash
 docker compose --env-file /secure/orenkod.env -f compose.yaml -f deployment/compose.production.yaml up --build -d
 docker compose exec app python manage.py check --deploy
-docker compose exec app python manage.py createsuperuser
+docker compose exec app python manage.py bootstrap_ministry
 ```
 
 Production override требует секрет и домены, включает `DJANGO_DEBUG=0` и запрещает автоматическое демо-наполнение. Приложение принимает подключения от локального reverse proxy; PostgreSQL и файлы загрузок не выдаются публично. `TRUST_PROXY_HEADERS=1` включайте только за доверенным proxy, который удаляет входящие заголовки клиента и сам устанавливает `X-Forwarded-Proto`. Передайте это значение и приложению, и планировщику в своей конфигурации Compose. Политики HTTPS/HSTS и secure cookies настраиваются в Django. Проверяйте `check --deploy` с фактической конфигурацией: успешная сборка образа не подтверждает корректный DNS, TLS и доставку почты.
@@ -58,9 +58,9 @@ docker compose exec app python manage.py backup_database
 python scripts/configure_deployment.py --domain platform.your-domain.ru
 # В .env.production безопасно заполните реальные настройки SMTP, когда они предоставлены.
 docker compose --env-file .env.production -f compose.yaml -f deployment/compose.production.yaml -f deployment/compose.public.yaml up --build -d
-docker compose --env-file .env.production -f compose.yaml -f deployment/compose.production.yaml -f deployment/compose.public.yaml exec app python manage.py bootstrap_federation --username owner --email owner@your-domain.ru
+docker compose --env-file .env.production -f compose.yaml -f deployment/compose.production.yaml -f deployment/compose.public.yaml exec app python manage.py bootstrap_ministry
 ```
 
-Генератор создаёт отдельные случайные секреты с закрытыми правами, не выводит их и не перезаписывает существующий файл. `.env.production` исключён из Git и сборки Docker. `bootstrap_federation` интерактивно запрашивает пароль и согласие владельца, создаёт обычный кабинет федерации без доступа в техническую админку и отказывается менять существующие аккаунты. Публичный сайт настраивается без демонстрационных людей и фиктивных нормативов; справочники после миграций подготавливаются автоматически.
+Генератор создаёт отдельные случайные секреты с закрытыми правами, не выводит их и не перезаписывает существующий файл. `.env.production` исключён из Git и сборки Docker. `bootstrap_ministry` создаёт единственный главный аккаунт. При незаданном FSP_MINISTRY_PASSWORD временные данные сохраняются в закрытом файле .local/first-access.txt внутри постоянного тома; они не печатаются в журнале и не перезаписываются при повторном запуске. Оператор сервера может прочитать этот файл внутри своего контейнера. Министерство создаёт аккаунты федераций через интерфейс; владельцы служебных аккаунтов при первом входе меняют пароль и подтверждают согласие. Публичный сайт настраивается без демонстрационных людей и фиктивных нормативов; справочники после миграций подготавливаются автоматически.
 
 Caddy принимает HTTPS, передаёт приложению проверенный протокол соединения и сохраняет сертификаты в отдельном томе. Не используйте этот сценарий поверх существующего proxy без проверки занятых портов и конфигурации. Создание конфигурационного файла и проверка Caddy не подтверждают выдачу сертификата или публикацию: результат проверяется после настройки настоящего DNS и сервера. Для почты нужен действующий SMTP, для официальных документов и нормативов — утверждённые заказчиком значения.

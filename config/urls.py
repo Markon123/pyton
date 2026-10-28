@@ -10,4 +10,5 @@ urlpatterns = [path('admin/', admin.site.urls), path('', include('federation.url
     path('governance/', include('governance.urls')),
     path('development/', include('development.urls')),
     path('reporting/', include('reporting.urls')),
+    path('privacy/', include('privacy_requests.urls')),
 ]

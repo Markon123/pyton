@@ -13,6 +13,11 @@ from django.utils.http import content_disposition_header
 
 
 DISCLAIMER = "Демонстрационный документ · вымышленные данные"
+
+
+def document_note():
+    from django.conf import settings
+    return DISCLAIMER if settings.FSP_DEMO_MODE else 'Сформировано в платформе ОренКод'
 CONTENT_TYPES = {
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -49,7 +54,7 @@ def _xlsx(title, headers, rows, subtitle, generated):
     sheet.title = "Данные"
     sheet.append([_cell(title)])
     sheet.append([_cell(subtitle)])
-    sheet.append([_cell(f"Сформирован: {generated} · {DISCLAIMER}")])
+    sheet.append([_cell(f"Сформирован: {generated} · {document_note()}")])
     sheet.append([])
     sheet.append([_cell(header) for header in headers])
     for row in rows:
@@ -102,7 +107,7 @@ def _docx(title, headers, rows, subtitle, generated):
     for row in rows:
         for cell, value in zip(table.add_row().cells, row):
             cell.text = _text(value)
-    section.footer.paragraphs[0].text = DISCLAIMER
+    section.footer.paragraphs[0].text = document_note()
     stream = BytesIO()
     document.save(stream)
     return stream.getvalue()
@@ -127,7 +132,7 @@ def _pdf(title, headers, rows, subtitle, generated):
     pagesize = landscape(A4) if len(headers) > 5 else A4
     stream = BytesIO()
     document = SimpleDocTemplate(stream, pagesize=pagesize, rightMargin=28, leftMargin=28,
-                                 topMargin=32, bottomMargin=46, title=title, author="ОренКод · демо")
+                                 topMargin=32, bottomMargin=46, title=title, author="ОренКод")
     base = ParagraphStyle("FspBody", fontName="FspDejaVu", fontSize=8, leading=12,
                           alignment=TA_LEFT, splitLongWords=True)
     heading = ParagraphStyle("FspHeading", parent=base, fontName="FspDejaVu-Bold", fontSize=16, leading=21)
@@ -160,7 +165,7 @@ def _pdf(title, headers, rows, subtitle, generated):
         canvas.saveState()
         canvas.setFont("FspDejaVu", 7)
         canvas.setFillColor(colors.HexColor("#596579"))
-        canvas.drawString(28, 25, DISCLAIMER)
+        canvas.drawString(28, 25, document_note())
         canvas.drawRightString(pagesize[0] - 28, 25, str(doc.page))
         canvas.restoreState()
 

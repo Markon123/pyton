@@ -2,6 +2,7 @@ from datetime import date
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -15,7 +16,7 @@ class Role(models.TextChoices):
     ATHLETE = 'athlete', 'Спортсмен'
     COACH = 'coach', 'Тренер'
     JUDGE = 'judge', 'Судья'
-    MINISTRY = 'ministry', 'Министерство · чтение'
+    MINISTRY = 'ministry', 'Министерство'
 
 
 class Discipline(models.Model):
@@ -155,6 +156,25 @@ class Competition(models.Model):
     def is_registration_open(self):
         return self.state == 'open' and self.registration_opens <= timezone.localdate() <= self.registration_closes
 
+    def validate_publication_details(self):
+        """Check plan requirements for every publication/registration entry point.
+
+        Drafts may be incomplete. Existing records are deliberately not rewritten:
+        an organiser must supply the actual plan number before publishing them.
+        """
+        errors = {}
+        expected_plan = 'regional' if self.level == 'regional' else 'ekp'
+        if self.level in dict(self.LEVELS) and self.calendar_plan != expected_plan:
+            errors['calendar_plan'] = (
+                'Региональное соревнование должно быть включено в календарный план Оренбургской области.'
+                if expected_plan == 'regional' else
+                'Межрегиональное или всероссийское соревнование должно быть включено в ЕКП Минспорта России.'
+            )
+        if not (self.plan_number or '').strip():
+            errors['plan_number'] = 'Перед публикацией укажите действительный номер соревнования в календарном плане.'
+        if errors:
+            raise ValidationError(errors)
+
     def clean(self):
         super().clean()
         if self.starts_on and self.ends_on and self.ends_on < self.starts_on:
@@ -165,6 +185,8 @@ class Competition(models.Model):
             raise ValidationError({'registration_closes': 'Регистрация должна завершаться не позже начала соревнования.'})
         if self.age_min is not None and self.age_max is not None and self.age_max < self.age_min:
             raise ValidationError({'age_max': 'Верхняя граница возраста меньше нижней.'})
+        if self.state != 'draft':
+            self.validate_publication_details()
 
     def __str__(self):
         return self.title
@@ -354,6 +376,48 @@ class Notification(models.Model):
         return self.title
 
 
+class ReportDeadline(models.Model):
+    title = models.CharField('Название отчёта', max_length=180)
+    description = models.TextField('Что необходимо подготовить', blank=True)
+    due_on = models.DateField('Срок сдачи')
+    remind_days = models.PositiveSmallIntegerField('Напомнить за дней', default=7, validators=[MaxValueValidator(365)])
+    recipients = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='assigned_report_deadlines',
+        verbose_name='Ответственные', help_text='Если не выбраны, напоминание получат действующие сотрудники федерации.')
+    active = models.BooleanField('Действует', default=True)
+    completed_at = models.DateTimeField('Выполнено', null=True, blank=True)
+    completed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='completed_report_deadlines', verbose_name='Отметил выполнение')
+    completion_note = models.TextField('Примечание о выполнении', blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='created_report_deadlines', verbose_name='Создал')
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Изменено', auto_now=True)
+
+    class Meta:
+        ordering = ['due_on', 'id']
+        verbose_name = 'Срок отчёта'
+        verbose_name_plural = 'Сроки отчётов'
+        constraints = [models.CheckConstraint(condition=models.Q(remind_days__lte=365), name='report_deadline_reminder_limit')]
+
+    @property
+    def overdue(self):
+        return self.active and not self.completed_at and self.due_on < timezone.localdate()
+
+    def __str__(self):
+        return f'{self.title} · до {self.due_on:%d.%m.%Y}'
+
+
+class ReminderDispatch(models.Model):
+    """A durable idempotency record; mail transport retries its notification."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    key = models.CharField(max_length=64)
+    notification = models.ForeignKey(Notification, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'key'], name='unique_reminder_dispatch')]
+
+
 class AuditLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
     role = models.CharField('Роль', max_length=20, choices=Role.choices)
@@ -423,3 +487,31 @@ class DocumentLayout(models.Model):
 
     def __str__(self):
         return self.get_kind_display()
+
+
+class MinistryAuthority(models.Model):
+    """The single institution account permitted to provision federations."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ministry_authority')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Главный аккаунт министерства'
+        verbose_name_plural = 'Главный аккаунт министерства'
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_ministry_authority')]
+
+
+class ProvisionedAccount(models.Model):
+    KINDS = [('ministry', 'Министерство'), ('federation', 'Федерация')]
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='provisioning')
+    kind = models.CharField('Тип аккаунта', max_length=12, choices=KINDS)
+    institution = models.CharField('Название организации', max_length=200)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, related_name='provisioned_accounts')
+    must_change_password = models.BooleanField('Требуется первый вход', default=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
+        verbose_name = 'Служебная учётная запись'
+        verbose_name_plural = 'Служебные учётные записи'

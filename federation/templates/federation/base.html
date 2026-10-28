@@ -39,9 +39,10 @@
     {% if active_role == 'federation' or active_role == 'ministry' %}<a class="nav-link {% if nav == 'reports' %}active{% endif %}" href="{% url 'reports' %}"><svg class="icon"><use href="#i-file"/></svg>Отчёты и документы</a>{% endif %}
     {% if active_role == 'coach' or active_role == 'athlete' or active_role == 'federation' %}<a class="nav-link {% if nav == 'coaching' %}active{% endif %}" href="{% url 'coaching' %}"><svg class="icon"><use href="#i-users"/></svg>Тренеры и спортсмены</a>{% endif %}
   </nav>
-  <div class="nav-caption nav-caption-secondary">СЕРВИСЫ</div>
+  {% if active_role == 'ministry' %}<nav class="nav-list"><a class="nav-link" href="{% url 'federation_accounts' %}">Аккаунты федераций</a></nav>{% endif %}<div class="nav-caption nav-caption-secondary">СЕРВИСЫ</div>
   <nav class="nav-list">
     <a class="nav-link {% if nav == 'notifications' %}active{% endif %}" href="{% url 'notifications' %}"><svg class="icon"><use href="#i-bell"/></svg>Уведомления{% if unread_count %}<span class="count">{{ unread_count }}</span>{% endif %}</a>
+    <a class="nav-link {% if nav == 'report_deadlines' %}active{% endif %}" href="{% url 'report_deadlines' %}"><svg class="icon"><use href="#i-calendar"/></svg>Сроки отчётов</a>
     {% if active_role == 'federation' %}<a class="nav-link {% if nav == 'audit' %}active{% endif %}" href="{% url 'audit' %}"><svg class="icon"><use href="#i-file"/></svg>Журнал действий</a>{% endif %}
     <a class="nav-link {% if nav == 'guide' %}active{% endif %}" href="{% url 'guide' %}"><svg class="icon"><use href="#i-book"/></svg>С чего начать</a>
   </nav>
@@ -51,8 +52,8 @@
 {% if active_role == 'federation' or active_role == 'ministry' %}<a class="nav-link" href="{% url 'development:index' %}">Развитие региона</a>{% if active_role == 'federation' %}<a class="nav-link" href="{% url 'governance:awards' %}">Премии Губернатора</a>{% endif %}<a class="nav-link" href="{% url 'governance:ministry' %}">Кабинет министерства</a>{% endif %}
 {% if active_role == 'federation' or active_role == 'judge' %}<a class="nav-link" href="{% url 'development:judging' %}">Документы о судействе</a>{% endif %}
 {% if active_role == 'federation' %}<a class="nav-link" href="{% url 'development:candidates' %}">Кандидаты на разряды</a><a class="nav-link" href="{% url 'development:criteria' %}">Правила квалификации</a><a class="nav-link" href="{% url 'configuration' %}">Справочники и макеты</a><a class="nav-link" href="{% url 'integrations:index' %}">API и интеграции</a><a class="nav-link" href="{% url 'identity:clients' %}">ФСП ID · приложения</a>{% endif %}
-<a class="nav-link" href="{% url 'identity:demo' %}">Проверить ФСП ID</a></nav></details>
-  <div class="sidebar-bottom"><div class="demo-tag">ДЕМОСРЕДА</div><p>Развиваем спортивное<br>программирование вместе.</p><span>Все персональные данные вымышлены</span></div>
+</nav></details>
+  <div class="sidebar-bottom"><div class="demo-tag">ЕДИНАЯ ПЛАТФОРМА</div><p>Развиваем спортивное<br>программирование вместе.</p><span>Доступ к данным определяется вашей ролью</span></div>
 </aside>
 <div class="workspace">
   <header class="topbar">

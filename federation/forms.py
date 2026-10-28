@@ -129,6 +129,7 @@ class RegistrationForm(UserCreationForm):
 class ProfileForm(forms.ModelForm):
     first_name = forms.CharField(label='Имя', max_length=150)
     last_name = forms.CharField(label='Фамилия', max_length=150)
+    email = forms.EmailField(label='Электронная почта', required=False)
     birth_date = forms.DateField(label='Дата рождения', widget=date_widget(), validators=[validate_birth_date])
     guardian_consent = forms.BooleanField(
         label='Законный представитель подтверждает согласие на обработку данных несовершеннолетнего (версия 1.0).', required=False,
@@ -137,7 +138,7 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = (
-            'first_name', 'last_name', 'birth_date', 'municipality', 'organization',
+            'first_name', 'last_name', 'email', 'birth_date', 'municipality', 'organization',
             'disciplines', 'start_year', 'guardian_name', 'guardian_consent',
             'anti_doping_date', 'anti_doping_url',
         )
@@ -154,6 +155,11 @@ class ProfileForm(forms.ModelForm):
         if self.instance and self.instance.user_id:
             self.fields['first_name'].initial = self.instance.user.first_name
             self.fields['last_name'].initial = self.instance.user.last_name
+            self.fields['email'].initial = self.instance.user.email
+            if any(role in self.instance.roles for role in ('ministry', 'federation')):
+                self.fields['first_name'].label = 'Название / имя'
+                for name in ('last_name', 'birth_date', 'disciplines', 'municipality'):
+                    self.fields[name].required = False
 
     def clean(self):
         data = super().clean()
@@ -179,7 +185,10 @@ class ProfileForm(forms.ModelForm):
         if commit:
             person.user.first_name = self.cleaned_data['first_name']
             person.user.last_name = self.cleaned_data['last_name']
-            person.user.save(update_fields=['first_name', 'last_name'])
+            # Omitted email in an older API payload keeps the existing address.
+            if 'email' in self.data:
+                person.user.email = self.cleaned_data.get('email', '')
+            person.user.save(update_fields=['first_name', 'last_name', 'email'])
             person.save()
             self.save_m2m()
             if self.cleaned_data.get('guardian_consent') and self.cleaned_data.get('guardian_name'):
@@ -191,7 +200,9 @@ class ProfileForm(forms.ModelForm):
 
 
 class FederationProfileForm(ProfileForm):
-    roles = forms.MultipleChoiceField(label='Роли', choices=Role.choices, widget=forms.CheckboxSelectMultiple)
+    roles = forms.MultipleChoiceField(label='Роли',
+        choices=[choice for choice in Role.choices if choice[0] in ('athlete', 'coach', 'judge')],
+        widget=forms.CheckboxSelectMultiple)
 
     class Meta(ProfileForm.Meta):
         fields = ProfileForm.Meta.fields + ('roles', 'status', 'end_year', 'disqualified_until')
@@ -199,6 +210,10 @@ class FederationProfileForm(ProfileForm):
 
     def clean(self):
         data = super().clean()
+        if self.instance.pk:
+            original_roles = Profile.objects.filter(pk=self.instance.pk).values_list('roles', flat=True).first() or []
+            if any(value in original_roles for value in ('federation', 'ministry')):
+                raise forms.ValidationError('Служебными аккаунтами управляет министерство. Для личных данных используйте свой профиль.')
         if data.get('status') == 'archived' and not data.get('end_year'):
             self.add_error('end_year', 'Для архивной записи укажите год окончания занятий: он используется в отчёте о численности.')
         return data
@@ -222,6 +237,8 @@ class CompetitionForm(forms.ModelForm):
         if types:
             self.fields['kind'] = forms.ChoiceField(label='Тип', choices=types)
         self.fields['regulation'].help_text = 'PDF или DOCX, до 5 МБ. Для открытия регистрации необходимо положение.'
+        self.fields['calendar_plan'].help_text = 'Региональные старты — план области; межрегиональные и всероссийские — ЕКП Минспорта России.'
+        self.fields['plan_number'].help_text = 'Обязателен перед публикацией и открытием приёма заявок. В черновике можно заполнить позднее.'
 
     def clean_regulation(self):
         uploaded = self.cleaned_data.get('regulation')

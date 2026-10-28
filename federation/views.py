@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth import login
@@ -17,11 +17,12 @@ from .access import active_role, can_view_person, managed_profiles, role_profile
 from .documents import build_document
 from .forms import (ApplicationForm, CoachLinkForm, CompetitionForm, FederationProfileForm,
                     JudgeAssignmentForm, OrganizationForm, ProfileForm, QualificationForm,
-                    RegistrationForm, ResultForm)
+                    RegistrationForm, ResultForm, RANK_TITLES, configured_titles)
 from .models import (Application, AuditLog, CoachLink, Competition, Consent, Discipline,
                      JudgeAssignment, Notification, Organization, Profile, RankApplication,
                      RatingRule, Result, Role, Team)
 from .services import audit, calculate_rating, census, census_breakdown, integer, notify, layout_document
+from .search import search_profiles, search_organizations
 
 
 def form_page(request, form, title, cancel='dashboard', status=200):
@@ -38,6 +39,26 @@ def results_for(person):
     return Result.objects.filter(application__athlete=person, application__status='approved',
                                  application__competition__protocol_published=True).select_related(
                                      'application__competition', 'application__discipline', 'application__athlete__user')
+
+
+def protocol_is_complete(competition):
+    if competition.state not in ('closed', 'finished'):
+        return False
+    applications = competition.applications
+    approved = applications.filter(status='approved')
+    return (not applications.filter(status='pending').exists() and approved.exists()
+            and not approved.filter(result__isnull=True).exists())
+
+
+def dashboard_period(request, today):
+    def value(name, fallback):
+        try:
+            return parse_date(request.GET.get(name, '')) or fallback
+        except (TypeError, ValueError):
+            return fallback
+    start = value('date_from', date(today.year, 1, 1))
+    end = value('date_to', today)
+    return (start, end) if start <= end else (end, start)
 
 
 def register(request):
@@ -90,11 +111,30 @@ def dashboard(request):
         stats[0] = {'label': 'Мои назначения', 'value': JudgeAssignment.objects.filter(judge__user=request.user).count(), 'detail': 'Вся история судейства'}
         category = request.user.profile.current_category
         stats[3] = {'label': 'Действующая категория', 'value': 'Есть' if category else 'Нет', 'detail': f'До {category.valid_until:%d.%m.%Y}' if category else 'Подайте заявку в разделе категорий'}
+    period_start, period_end = dashboard_period(request, today)
+    candidates = []
     tasks = []
     if role == 'federation':
+        period_competitions = visible.filter(starts_on__range=(period_start, period_end))
+        stats = [
+            stats[0],
+            {'label': 'Проведённых соревнований', 'value': period_competitions.filter(state='finished').count(), 'detail': 'За выбранный период'},
+            {'label': 'Запланированных соревнований', 'value': period_competitions.exclude(state='finished').count(), 'detail': 'За выбранный период'},
+            {'label': 'Участников соревнований', 'value': apps.filter(status='approved', competition__starts_on__range=(period_start, period_end)).values('athlete_id').distinct().count(), 'detail': 'Уникальные допущенные спортсмены за период'},
+            {'label': 'Присвоенных разрядов', 'value': ranks.filter(kind='rank', status='approved', assigned_on__range=(period_start, period_end)).count(), 'detail': 'За выбранный период'},
+            {'label': 'Действующих судейских категорий', 'value': ranks.filter(kind='category', status='approved', assigned_on__lte=today, valid_until__gte=today).values('athlete_id').distinct().count(), 'detail': 'Судей с действующей категорией на сегодня'},
+            stats[2], stats[3],
+        ]
         pending = ranks.filter(status='pending').count()
         tasks.append({'title': f'{apps.filter(status="pending").count()} заявок на соревнования', 'detail': 'Проверьте допуск участников', 'url': reverse('competitions')})
         tasks.append({'title': f'{pending} заявок на разряды и категории', 'detail': 'Рассмотрите документы и основание', 'url': reverse('qualifications')})
+        from development.services import rank_candidates
+        candidates = rank_candidates()
+        tasks.append({'title': f'{len({item["athlete"].pk for item in candidates})} кандидатов на разряд', 'detail': 'Проверьте основания и настроенные критерии', 'url': reverse('development:candidates')})
+        award_due = date(today.year if today < date(today.year, 2, 1) else today.year + 1, 2, 1)
+        tasks.append({'title': 'Ходатайства на премии Губернатора', 'detail': f'Подготовить до {award_due:%d.%m.%Y}', 'url': reverse('governance:awards')})
+    from .deadlines import dashboard_deadline_tasks
+    tasks.extend(dashboard_deadline_tasks(request.user, today, role=role))
     for rank in ranks.filter(status='approved', valid_until__range=(today, today + timedelta(days=30))).select_related('athlete__user')[:4]:
         tasks.append({'title': f'Истекает: {rank.requested_title}', 'detail': f'{rank.athlete.display_name} · до {rank.valid_until:%d.%m.%Y}', 'url': reverse('qualifications')})
     for comp in visible.filter(state='open', registration_closes__range=(today, today + timedelta(days=14)))[:3]:
@@ -106,6 +146,7 @@ def dashboard(request):
     return render(request, 'federation/dashboard.html', {'stats': stats, 'upcoming': upcoming, 'tasks': tasks,
                   'recent_results': results.order_by('-application__competition__starts_on', 'place')[:5],
                   'discipline_stats': disc_stats, 'recent_activity': AuditLog.objects.select_related('user')[:5] if role == 'federation' else [], 'today': today,
+                  'period_start': period_start, 'period_end': period_end, 'rank_candidates': candidates[:5],
                   'judge_assignments': JudgeAssignment.objects.filter(judge__user=request.user).select_related('competition') if role == 'judge' else [],
                   'current_category': request.user.profile.current_category if role == 'judge' else None})
 
@@ -170,6 +211,7 @@ def competition_detail(request, pk):
     return render(request, 'federation/competition_detail.html', {
         'competition': comp, 'applications': apps, 'results': results.order_by('application__discipline', 'place'),
         'judges': comp.judge_assignments.select_related('judge__user'), 'can_manage': role == 'federation', 'can_apply': can_apply,
+        'can_preview_protocol': role == 'federation' and not comp.protocol_published and protocol_is_complete(comp),
         'application_form': ApplicationForm(user=request.user, competition=comp, role=role) if can_apply else None,
         'result_form': ResultForm(competition=comp) if role == 'federation' and comp.state == 'closed' else None,
         'judge_form': JudgeAssignmentForm(competition=comp) if role == 'federation' and not comp.protocol_published else None})
@@ -182,7 +224,14 @@ def competition_action(request, pk):
     comp = get_object_or_404(Competition.objects.select_for_update(), pk=pk)
     action = request.POST.get('action')
     error = None
-    if comp.protocol_published:
+    if action in ('publish_competition', 'open', 'reopen', 'publish'):
+        try:
+            comp.validate_publication_details()
+        except ValidationError as validation:
+            error = ' '.join(validation.messages)
+    if error:
+        pass
+    elif comp.protocol_published:
         error = 'Протокол уже опубликован; результаты зафиксированы.'
     elif action in ('open', 'reopen'):
         if comp.state not in ('draft', 'published', 'closed'):
@@ -315,12 +364,12 @@ def registry(request):
     kind = request.GET.get('kind', 'athlete')
     if kind not in ('athlete', 'coach', 'judge', 'organization'):
         kind = 'athlete'
-    qs = role_profiles(kind) if kind != 'organization' else Profile.objects.none()
+    qs = role_profiles(kind).select_related('user', 'organization') if kind != 'organization' else Profile.objects.none()
     organizations = Organization.objects.all()
     q = request.GET.get('q', '').strip()
     if q:
-        qs = qs.filter(Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q) | Q(municipality__icontains=q))
-        organizations = organizations.filter(Q(name__icontains=q) | Q(municipality__icontains=q))
+        qs = search_profiles(qs, q)
+        organizations = search_organizations(organizations, q)
     if request.GET.get('discipline', '').isdigit():
         qs = qs.filter(disciplines=request.GET['discipline'])
     if request.GET.get('org', '').isdigit():
@@ -348,7 +397,9 @@ def athlete_detail(request, pk):
     person = get_object_or_404(Profile.objects.select_related('user', 'organization'), pk=pk)
     if not can_view_person(request, person):
         raise PermissionDenied('Личная карточка доступна спортсмену, его тренеру и федерации.')
+    from training.services import athlete_training_history
     return render(request, 'federation/athlete_detail.html', {'person': person, 'results': results_for(person),
+                  'training_history': athlete_training_history(person),
                   'ranks': person.rank_applications.filter(status='approved'),
                   'consents': person.user.consents.all() if person.user_id == request.user.pk or active_role(request) == 'federation' else [],
                   'links': person.coach_links.select_related('coach__user', 'discipline')})
@@ -363,7 +414,9 @@ def profile(request):
         audit(request, 'Изменён профиль', f'profile:{person.pk}')
         messages.success(request, 'Профиль сохранён.')
         return redirect('profile')
-    return render(request, 'federation/profile.html', {'form': form, 'person': person, 'consents': request.user.consents.all(), 'results': results_for(person)}, status=400 if request.method == 'POST' else 200)
+    from training.services import athlete_training_history
+    return render(request, 'federation/profile.html', {'form': form, 'person': person, 'consents': request.user.consents.all(), 'results': results_for(person),
+                  'training_history': athlete_training_history(person)}, status=400 if request.method == 'POST' else 200)
 
 
 @roles_required('federation')
@@ -395,6 +448,21 @@ def organization_create(request):
         audit(request, 'Создана организация', f'organization:{org.pk}', org.name)
         return redirect('registry')
     return form_page(request, form, 'Новая организация', 'registry', 400 if request.method == 'POST' else 200)
+
+
+@login_required
+def organization_detail(request, pk):
+    organization = get_object_or_404(Organization, pk=pk)
+    from training.models import OrganizationProgram, TrainingGroup
+    # Registry details are shared; personal histories and internal audit stay scoped.
+    people = Profile.objects.filter(organization=organization).select_related('user').prefetch_related('disciplines')
+    events = AuditLog.objects.filter(entity=f'organization:{organization.pk}').select_related('user') if active_role(request) == 'federation' else []
+    return render(request, 'federation/organization_detail.html', {
+        'organization': organization, 'people': people,
+        'programs': OrganizationProgram.objects.filter(organization=organization).select_related('discipline'),
+        'groups': TrainingGroup.objects.filter(organization=organization).select_related('discipline', 'coach__user'),
+        'organization_events': events,
+    })
 
 
 @roles_required('federation', 'athlete', 'coach', 'judge')
@@ -477,7 +545,14 @@ def coaching(request):
         links = links.filter(coach__user=request.user)
     elif role == 'athlete':
         links = links.filter(athlete__user=request.user)
-    return render(request, 'federation/coaching.html', {'links': links, 'pending': links.filter(status='pending'), 'form': form}, status=400 if request.method == 'POST' else 200)
+    pending = links.filter(status='pending')
+    rows = list(links)
+    histories = {}
+    for event in AuditLog.objects.filter(entity__in=[f'coachlink:{link.pk}' for link in rows]).select_related('user').order_by('created_at', 'pk'):
+        histories.setdefault(event.entity, []).append(event)
+    for link in rows:
+        link.history_events = histories.get(f'coachlink:{link.pk}', [])
+    return render(request, 'federation/coaching.html', {'links': rows, 'pending': pending, 'form': form}, status=400 if request.method == 'POST' else 200)
 
 
 @require_POST
@@ -519,7 +594,8 @@ def rating(request):
     return render(request, 'federation/rating.html', {'entries': entries, 'disciplines': Discipline.objects.all(),
                   'season': season, 'selected_discipline': discipline, 'federated': active_role(request) == 'federation',
                   'team': Team.objects.filter(season=season, discipline_id=discipline).order_by('-created_at').first(),
-                  'rules': RatingRule.objects.all(), 'age_min': age_min, 'age_max': age_max})
+                  'rules': RatingRule.objects.all(), 'age_min': age_min, 'age_max': age_max,
+                  'rank_titles': configured_titles('rank', RANK_TITLES)})
 
 
 @require_POST
@@ -593,12 +669,20 @@ def reports(request):
 def export_document(request, kind, pk, fmt):
     role = active_role(request)
     if kind == 'protocol':
-        comp = get_object_or_404(competitions_for(request), pk=pk, protocol_published=True)
+        comp = get_object_or_404(competitions_for(request), pk=pk)
+        preliminary = not comp.protocol_published
+        if preliminary:
+            if role != 'federation':
+                raise PermissionDenied('Предварительный протокол доступен только федерации.')
+            if not protocol_is_complete(comp):
+                return HttpResponseBadRequest('Закройте регистрацию, рассмотрите все заявки и внесите результаты всех допущенных участников.')
         results = Result.objects.filter(application__competition=comp, application__status='approved').select_related('application__athlete__user', 'application__athlete__organization', 'application__discipline').order_by('application__discipline', 'place')
-        title, headers = f'Протокол · {comp.title}', ['Место', 'Спортсмен', 'Дисциплина', 'Организация', 'Баллы']
+        title, headers = f'{"Предварительный протокол" if preliminary else "Протокол"} · {comp.title}', ['Место', 'Спортсмен', 'Дисциплина', 'Организация', 'Баллы']
         rows = [[r.place, r.application.athlete.display_name, r.application.discipline.name,
                  str(r.application.athlete.organization or 'Без организации'), r.score] for r in results]
         subtitle = f'{comp.starts_on:%d.%m.%Y} · {comp.location} · {comp.get_level_display()}'
+        if preliminary:
+            subtitle += '\nПредварительный документ. Протокол не опубликован.'
     elif kind == 'team':
         if role not in ('federation', 'ministry'):
             raise PermissionDenied
@@ -618,7 +702,7 @@ def export_document(request, kind, pk, fmt):
         if role not in ('federation', 'ministry'):
             raise PermissionDenied
         start, end, disc, org = census_filters(request)
-        title, headers = 'Динамика численности занимающихся', ['Год', 'Разрез', 'Группа', 'Число спортсменов']
+        title, headers = 'Численность занимающихся спортивным программированием в Оренбургской области', ['Год', 'Разрез', 'Группа', 'Число спортсменов']
         extra = census_extra(request)
         rows = [[r['year'], 'Всего', 'Регион', r['total']] for r in census(start, end, disc, org, **extra)]
         rows.extend([[r['year'], r['dimension'], r['label'], r['total']] for r in census_breakdown(start, end, disc, org, **extra)])

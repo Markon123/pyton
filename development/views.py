@@ -15,7 +15,7 @@ from federation.models import Competition, Discipline, JudgeAssignment, Organiza
 from federation.services import audit, census, integer, layout_document, notify
 from .forms import CertificateForm, CriterionForm, EvidenceForm
 from .models import Evidence, ParticipationCertificate, RankCriterion, result_fingerprint
-from .services import can_access_result, certificate_pdf, certificate_url, rank_candidates
+from .services import athlete_rank_path, can_access_result, certificate_pdf, certificate_url, preparation_organizations, rank_candidates
 
 
 def person_for(request):
@@ -50,14 +50,15 @@ def index(request):
     year = integer(request.GET.get('year'), timezone.localdate().year, 1900, timezone.localdate().year)
     counts = census(year - 1, year)
     competitions = Competition.objects.filter(starts_on__year=year, starts_on__lte=timezone.localdate(), state='finished').exclude(plan_number='').prefetch_related('disciplines')
-    organizations = Organization.objects.all()
+    organizations = preparation_organizations()
     try:
         from training.models import OrganizationProgram
         programs = OrganizationProgram.objects.select_related('organization', 'discipline')
     except ImportError:
         programs = []
     return render(request, 'development/index.html', {'year': year, 'counts': counts, 'competitions': competitions,
-                  'organizations': organizations, 'programs': programs, 'evidence': Evidence.objects.filter(year=year),
+                  'organizations': organizations, 'registry_organization_count': Organization.objects.count(),
+                  'programs': programs, 'evidence': Evidence.objects.filter(year=year),
                   'levels': competitions.values('level').annotate(total=Count('pk')).order_by('level'),
                   'form': EvidenceForm(initial={'year': year}) if active_role(request) == 'federation' else None})
 
@@ -68,18 +69,23 @@ def pathway(request):
     people, person = person_for(request)
     upcoming = Competition.objects.none()
     matches = []
+    rank_steps = []
+    criteria = []
     current = None
     if person:
         current = person.current_rank
+        rank_steps = athlete_rank_path(person)
+        criteria = [criterion for step in rank_steps for criterion in step['criteria']]
         ids = []
         for comp in Competition.objects.filter(state__in=['open', 'published'], starts_on__gte=timezone.localdate()).prefetch_related('disciplines'):
             age = person.age_on(comp.starts_on)
             if age is not None and comp.age_min <= age <= comp.age_max and person.disciplines.filter(pk__in=comp.disciplines.values('pk')).exists():
                 ids.append(comp.pk)
         upcoming = Competition.objects.filter(pk__in=ids)
-        matches = rank_candidates([person.pk])
+        target_ids = {criterion.pk for criterion in criteria}
+        matches = [match for match in rank_candidates([person.pk]) if match['criterion'].pk in target_ids]
     return render(request, 'development/pathway.html', {'people': people, 'person': person, 'current': current,
-                  'upcoming': upcoming, 'matches': matches, 'criteria': RankCriterion.objects.filter(active=True, discipline__profiles=person).distinct() if person else []})
+                  'upcoming': upcoming, 'matches': matches, 'criteria': criteria, 'rank_steps': rank_steps})
 
 
 @roles_required('federation', 'coach')

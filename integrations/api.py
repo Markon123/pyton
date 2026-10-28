@@ -145,6 +145,9 @@ class BaseAPI(APIView):
         super().initial(request, *args, **kwargs)
         request.active_role = role(request)
         request._request.active_role = request.active_role
+        from federation.models import ProvisionedAccount
+        if ProvisionedAccount.objects.filter(user=request.user, must_change_password=True).exists():
+            raise PermissionDenied('Завершите первый вход и смените временный пароль через личный кабинет.', code='account_activation_required')
 
     def page(self, request, rows):
         pager = PageNumberPagination()
@@ -241,9 +244,8 @@ class ProfilesAPI(BaseAPI):
             return Response(json_profile(person, True))
         qs = role_profiles(kind)
         if request.query_params.get('q'):
-            from django.db.models import Q
-            q = request.query_params['q']
-            qs = qs.filter(Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q))
+            from federation.search import search_profiles
+            qs = search_profiles(qs, request.query_params['q'])
         for query, field in [('discipline', 'disciplines'), ('organization', 'organization')]:
             if request.query_params.get(query, '').isdigit():
                 qs = qs.filter(**{field: request.query_params[query]})
@@ -461,7 +463,7 @@ class TeamsAPI(BaseAPI):
 class CensusAPI(BaseAPI):
     def get(self, request):
         require_roles(request, 'federation', 'ministry')
-        return Response({'results': census(*workflow.census_filters(request))})
+        return Response({'results': census(*workflow.census_filters(request), **workflow.census_extra(request))})
 
 
 class NotificationsAPI(BaseAPI):
@@ -569,27 +571,67 @@ class SchemaAPI(APIView):
         paths = {}
         endpoints = {'auth/login/': ['post'], 'auth/register/': ['post'], 'auth/refresh/': ['post'],
                      'auth/logout/': ['post'], 'auth/switch-role/': ['post'], 'me/': ['get', 'patch'],
+                     'athletes/': ['get', 'post'], 'athletes/{id}/': ['get', 'patch'],
+                     'coaches/': ['get'], 'judges/': ['get'],
                      'competitions/': ['get', 'post'], 'competitions/{id}/': ['get', 'patch'],
-                     'competitions/{id}/applications/': ['post'], 'competitions/{id}/results/': ['get', 'post'],
+                     'competitions/{id}/applications/': ['get', 'post'], 'competitions/{id}/results/': ['get', 'post'],
+                     'competitions/{id}/protocol/': ['get'],
                      'competitions/{id}/results/import/': ['post'], 'applications/': ['get'],
                      'applications/{id}/moderate/': ['patch'], 'rank-applications/': ['post'],
-                     'qualifications/': ['get'], 'rating/': ['get'], 'national-team/': ['get', 'post'],
+                     'qualifications/': ['get'], 'ranks/': ['get'], 'rating/': ['get'],
+                     'national-team/': ['get', 'post'], 'national-team/{id}/': ['get'],
                      'reports/athletes-count/': ['get'], 'reports/athlete-competitions/{id}/': ['get'],
                      'notifications/': ['get'], 'audit-log/': ['get'], 'coach-links/': ['get', 'post'],
+                     'notifications/{id}/read/': ['patch'], 'dictionaries/{kind}/': ['get', 'post'],
+                     'documents/{kind}/{id}/{fmt}/': ['get'],
                      'coach-links/{id}/': ['patch'], 'competitions/{id}/publish/': ['post'],
                      'competitions/{id}/open-applications/': ['post'], 'competitions/{id}/close-applications/': ['post'],
                      'competitions/{id}/publish-protocol/': ['post'], 'qualifications/{id}/review/': ['patch'],
-                     'judge-category-applications/': ['post'], 'competitions/{id}/judge-assignments/': ['get', 'post']}
+                     'judge-category-applications/': ['post'], 'competitions/{id}/judge-assignments/': ['get', 'post'],
+                     'judge-assignments/': ['get']}
+        public = {'auth/login/', 'auth/register/', 'auth/refresh/'}
         for endpoint, methods in endpoints.items():
             paths['/api/v1/' + endpoint] = {method: {'responses': {'200': {'description': 'Успех'},
-                  '400': {'description': 'Ошибка валидации'}, '403': {'description': 'Нет разрешения'}},
-                  'security': [] if endpoint.startswith('auth/') and endpoint != 'auth/switch-role/' else [{'JWT': []}]} for method in methods}
+                  '400': {'description': 'Ошибка валидации'}, '401': {'description': 'Требуется действующая авторизация'},
+                  '403': {'description': 'Нет разрешения'}},
+                  'security': [] if endpoint in public else [{'JWT': []}]} for method in methods}
             for method in methods:
                 operation = paths['/api/v1/' + endpoint][method]
-                if '{id}' in endpoint:
-                    operation['parameters'] = [{'name': 'id', 'in': 'path', 'required': True, 'schema': {'type': 'integer'}}]
+                parameters = []
+                for parameter in ('id', 'kind', 'fmt'):
+                    if '{' + parameter + '}' in endpoint:
+                        schema = {'type': 'integer', 'minimum': 0 if endpoint.startswith('documents/') else 1} if parameter == 'id' else {'type': 'string'}
+                        if parameter == 'fmt':
+                            schema['enum'] = ['json', 'xlsx', 'docx', 'pdf']
+                        parameters.append({'name': parameter, 'in': 'path', 'required': True, 'schema': schema})
+                if parameters:
+                    operation['parameters'] = parameters
                 if method in ('post', 'patch'):
                     operation['requestBody'] = {'content': {'application/json': {'schema': {'type': 'object'}}}}
+
+        census = paths['/api/v1/reports/athletes-count/']['get']
+        census['parameters'] = [
+            {'name': name, 'in': 'query', 'schema': {'type': 'integer', 'minimum': lower, 'maximum': upper}}
+            for name, lower, upper in [('year_from', 1900, 2100), ('year_to', 1900, 2100),
+                                       ('discipline', 1, 1000000), ('org', 1, 1000000),
+                                       ('age_min', 0, 120), ('age_max', 0, 120)]
+        ] + [{'name': 'municipality', 'in': 'query', 'schema': {'type': 'string'},
+              'description': 'Муниципалитет; применяется вместе с возрастом, организацией и дисциплиной.'}]
+        census['responses']['200']['content'] = {'application/json': {'schema': {'type': 'object',
+            'required': ['results'], 'properties': {'results': {'type': 'array', 'items': {
+                'type': 'object', 'required': ['year', 'total'], 'properties': {
+                    'year': {'type': 'integer'}, 'total': {'type': 'integer', 'minimum': 0}}}}}}}}
+        importer = paths['/api/v1/competitions/{id}/results/import/']['post']
+        importer['security'].append({'Partner': []})
+        importer['requestBody'] = {'required': True, 'content': {'application/json': {'schema': {
+            'type': 'object', 'required': ['results'], 'properties': {'results': {
+                'type': 'array', 'minItems': 1, 'maxItems': 10000, 'items': {
+                    'type': 'object', 'required': ['application', 'place', 'score'], 'properties': {
+                        'application': {'type': 'integer', 'minimum': 1},
+                        'place': {'type': 'integer', 'minimum': 1},
+                        'score': {'oneOf': [{'type': 'number', 'minimum': 0}, {'type': 'string', 'minLength': 1}],
+                                  'description': 'Конечное неотрицательное число: до 8 цифр целой части и 2 дробных. Все поля обязательны; округление и значения по умолчанию не применяются.'},
+                    }}}}}}}}
         return Response({'openapi': '3.0.3', 'info': {'title': 'ОренКод API', 'version': '1.0'}, 'paths': paths,
                          'components': {'securitySchemes': {'JWT': {'type': 'http', 'scheme': 'bearer', 'bearerFormat': 'JWT'},
                                                            'Partner': {'type': 'apiKey', 'in': 'header', 'name': 'Authorization'}}}})

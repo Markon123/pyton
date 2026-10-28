@@ -1,0 +1,147 @@
+{
+  "checked_at_utc": "2026-10-28T14:20:34.553721+00:00",
+  "policy": "One preprovisioned ministry principal; ministry creates federations; athlete/coach/judge self-register. No default sample users or competitions.",
+  "tests": {
+    "sqlite": {
+      "count": 203,
+      "seconds": 30.938,
+      "result": "passed"
+    },
+    "postgresql": {
+      "count": 203,
+      "seconds": 37.724,
+      "result": "passed"
+    }
+  },
+  "clean_install": {
+    "user_count": 1,
+    "principal_role": "ministry",
+    "competition_count": 0,
+    "repeat_does_not_reset_password": true,
+    "private_access_file_mode": "0600 on POSIX",
+    "password_values_excluded": true
+  },
+  "browser": {
+    "principal_provisioned": true,
+    "only_ministry_creates_federation": true,
+    "first_login_changes_password": true,
+    "public_roles": [
+      "athlete",
+      "coach",
+      "judge"
+    ],
+    "workflow": true,
+    "preview_download": true,
+    "protocol_pdf": true,
+    "athlete_history": true,
+    "browser_errors": [],
+    "responsive": [
+      {
+        "route": "/",
+        "width": 360,
+        "status": 200
+      },
+      {
+        "route": "/reports/",
+        "width": 360,
+        "status": 200
+      },
+      {
+        "route": "/report-deadlines/",
+        "width": 360,
+        "status": 200
+      },
+      {
+        "route": "/reporting/",
+        "width": 360,
+        "status": 200
+      },
+      {
+        "route": "/notifications/mail/",
+        "width": 360,
+        "status": 200
+      },
+      {
+        "route": "/profile/",
+        "width": 360,
+        "status": 200
+      },
+      {
+        "route": "/privacy/",
+        "width": 360,
+        "status": 200
+      },
+      {
+        "route": "/",
+        "width": 768,
+        "status": 200
+      },
+      {
+        "route": "/reports/",
+        "width": 768,
+        "status": 200
+      },
+      {
+        "route": "/report-deadlines/",
+        "width": 768,
+        "status": 200
+      },
+      {
+        "route": "/reporting/",
+        "width": 768,
+        "status": 200
+      },
+      {
+        "route": "/notifications/mail/",
+        "width": 768,
+        "status": 200
+      },
+      {
+        "route": "/profile/",
+        "width": 768,
+        "status": 200
+      },
+      {
+        "route": "/privacy/",
+        "width": 768,
+        "status": 200
+      },
+      {
+        "route": "/",
+        "width": 1440,
+        "status": 200
+      },
+      {
+        "route": "/reports/",
+        "width": 1440,
+        "status": 200
+      },
+      {
+        "route": "/report-deadlines/",
+        "width": 1440,
+        "status": 200
+      },
+      {
+        "route": "/reporting/",
+        "width": 1440,
+        "status": 200
+      },
+      {
+        "route": "/notifications/mail/",
+        "width": 1440,
+        "status": 200
+      },
+      {
+        "route": "/profile/",
+        "width": 1440,
+        "status": 200
+      },
+      {
+        "route": "/privacy/",
+        "width": 1440,
+        "status": 200
+      }
+    ]
+  },
+  "scope": "Browser acceptance uses an isolated fictional database; working database contains only the ministry principal. SMTP delivery verified using a separate local receiver, not an external mailbox."
+}

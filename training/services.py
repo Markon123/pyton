@@ -100,3 +100,47 @@ def participation_rows(start, end, discipline=None, organization=None, age_min=N
                           'discipline_id': enrollment.group.discipline_id, 'municipality': enrollment.municipality,
                           'stage': enrollment.group.stage, 'age': age}
     return list(facts.values())
+
+
+def athlete_training_history(person):
+    """Own dated preparation history for an already authorized profile page.
+
+    The caller checks its right to view ``person``. Every collection is scoped
+    to the same athlete, including both sides of an attestation. Saved result
+    thresholds and source snapshots are used instead of mutable current rules.
+    Legacy records have no invented historical source: their current reference
+    is labelled separately by the template.
+    """
+    enrollments = list(Enrollment.objects.filter(athlete_id=person.pk).select_related(
+        'group__organization', 'group__discipline', 'group__coach__user'))
+    assessments = list(AssessmentResult.objects.filter(athlete_id=person.pk).select_related(
+        'norm__discipline', 'recorded_by'))
+    by_id = {}
+    for result in assessments:
+        snapshot = result.norm_snapshot if isinstance(result.norm_snapshot, dict) else {}
+        result.history_is_legacy = not bool(snapshot)
+        result.history_norm = snapshot or {
+            'name': result.norm.name, 'unit': result.norm.unit,
+            'discipline_name': result.norm.discipline.name,
+            'stage_label': result.norm.get_stage_display(),
+        }
+        result.history_current_source = result.norm.source if result.history_is_legacy else ''
+        by_id[result.pk] = result
+    attestations = list(Attestation.objects.filter(
+        enrollment__athlete_id=person.pk, new_enrollment__athlete_id=person.pk,
+    ).select_related('enrollment__group__organization', 'enrollment__group__discipline',
+                     'destination__organization', 'new_enrollment', 'recorded_by'))
+    for attestation in attestations:
+        attestation.history_evidence = []
+        for saved in attestation.evidence if isinstance(attestation.evidence, list) else []:
+            if not isinstance(saved, dict):
+                continue
+            item = dict(saved)
+            result = by_id.get(item.get('result_id'))
+            item['norm_name'] = result.history_norm.get('name') if result else f'Норматив № {item.get("norm_id", "—")}'
+            item['unit'] = result.history_norm.get('unit', '') if result else ''
+            item['source'] = result.history_norm.get('source', '') if result else ''
+            item['legacy_source'] = result.history_is_legacy if result else True
+            attestation.history_evidence.append(item)
+    return {'enrollments': enrollments, 'assessments': assessments, 'attestations': attestations,
+            'counts': {'enrollments': len(enrollments), 'assessments': len(assessments), 'attestations': len(attestations)}}

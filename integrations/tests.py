@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 import hashlib
 import hmac
 import json
@@ -6,11 +7,12 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from federation.models import Application, AuditLog, Competition, Discipline, Profile, Result
+from federation.models import Application, AuditLog, Competition, Discipline, Organization, Profile, Result
 from .models import IntegrationEvent, PartnerToken, WebhookDelivery, WebhookEndpoint
 from .services import deliver_pending, emit_event, encrypt_key, import_results, validate_webhook_url
 
@@ -27,7 +29,7 @@ class APIIntegrationTests(TestCase):
         cls.ministry = cls.person('api-ministry', ['ministry'])
         cls.comp = Competition.objects.create(title='API demo', starts_on=cls.today, ends_on=cls.today,
             registration_opens=cls.today - timedelta(days=3), registration_closes=cls.today,
-            location='Демо', state='open', regulation='demo.pdf')
+            location='Демо', state='open', regulation='demo.pdf', plan_number='API-DEMO-1')
         cls.comp.disciplines.add(cls.discipline)
 
     @classmethod
@@ -153,6 +155,135 @@ class APIIntegrationTests(TestCase):
             import_results(self.comp, [{'application': app.pk, 'place': 2, 'score': 1}], self.fed.user)
         self.assertEqual(Result.objects.get().place, 1)
 
+    def test_import_rejects_lossy_integer_values_and_missing_score(self):
+        app = self.approved()
+        self.comp.state = 'closed'
+        self.comp.save()
+        invalid = [
+            {'application': app.pk, 'place': 1.5, 'score': 20},
+            {'application': app.pk, 'place': 1.0, 'score': 20},
+            {'application': app.pk, 'place': True, 'score': 20},
+            {'application': float(app.pk), 'place': 1, 'score': 20},
+            {'application': True, 'place': 1, 'score': 20},
+            {'application': str(app.pk) + '.0', 'place': 1, 'score': 20},
+            {'application': app.pk, 'place': '1.5', 'score': 20},
+            {'application': app.pk, 'place': 0, 'score': 20},
+            {'application': app.pk, 'place': -1, 'score': 20},
+            {'application': app.pk, 'place': 1},
+            None,
+            ['application', 'place', 'score'],
+        ]
+        for row in invalid:
+            with self.subTest(row=row), self.assertRaises(ValidationError):
+                import_results(self.comp, [row], self.fed.user)
+            self.assertFalse(Result.objects.exists())
+        self.assertFalse(AuditLog.objects.filter(action='Импорт результатов').exists())
+
+    def test_import_rejects_non_finite_negative_or_out_of_precision_scores(self):
+        app = self.approved()
+        self.comp.state = 'closed'
+        self.comp.save()
+        for score in (None, True, False, '', ' ', 'NaN', 'Infinity', '-Infinity',
+                      float('inf'), float('nan'), '1_000', {}, [], -1, '1.001', '100000000'):
+            with self.subTest(score=score), self.assertRaises(ValidationError):
+                import_results(self.comp, [{'application': app.pk, 'place': 1, 'score': score}], self.fed.user)
+            self.assertFalse(Result.objects.exists())
+
+    def test_invalid_later_import_row_preserves_existing_results_and_audit(self):
+        app, other = self.approved(), self.approved(self.other)
+        original = Result.objects.create(application=app, place=2, score='45.50')
+        self.comp.state = 'closed'
+        self.comp.save()
+        with self.assertRaises(ValidationError):
+            import_results(self.comp, [
+                {'application': app.pk, 'place': 1, 'score': 200},
+                {'application': other.pk, 'place': 2.5, 'score': 100},
+            ], self.fed.user)
+        original.refresh_from_db()
+        self.assertEqual((original.place, original.score), (2, Decimal('45.50')))
+        self.assertEqual(Result.objects.count(), 1)
+        self.assertFalse(AuditLog.objects.filter(action='Импорт результатов').exists())
+
+    def test_import_accepts_integer_csv_cells_and_atomic_place_swaps(self):
+        app, other = self.approved(), self.approved(self.other)
+        first = Result.objects.create(application=app, place=1, score=100)
+        second = Result.objects.create(application=other, place=2, score=90)
+        self.comp.state = 'closed'
+        self.comp.save()
+        imported = import_results(self.comp, [
+            {'application': f' {app.pk} ', 'place': '2', 'score': '142.50'},
+            {'application': str(other.pk), 'place': '+1', 'score': '0'},
+        ], self.fed.user)
+        self.assertEqual(len(imported), 2)
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual((first.place, first.score), (2, Decimal('142.50')))
+        self.assertEqual((second.place, second.score), (1, Decimal('0.00')))
+
+    def test_api_invalid_import_returns_validation_error_without_writes(self):
+        app = self.approved()
+        self.comp.state = 'closed'
+        self.comp.save()
+        client, _ = self.auth(self.fed)
+        for row in ({'application': app.pk, 'place': 1.5},
+                    {'application': app.pk, 'place': 1, 'score': 'NaN'}):
+            with self.subTest(row=row):
+                response = client.post(f'/api/v1/competitions/{self.comp.pk}/results/import/',
+                                       {'results': [row]}, format='json')
+                self.assertEqual(response.status_code, 400, response.data)
+                self.assertEqual(response.data['code'], 'validation_error')
+                self.assertFalse(Result.objects.exists())
+
+    def test_csv_upload_imports_real_numeric_results(self):
+        app = self.approved()
+        self.comp.state = 'closed'
+        self.comp.save()
+        self.client.force_login(self.fed.user)
+        uploaded = SimpleUploadedFile('results.csv',
+            f'application,place,score\n{app.pk},1,142.50\n'.encode(), content_type='text/csv')
+        response = self.client.post('/integrations/', {'action': 'import', 'competition': self.comp.pk, 'file': uploaded})
+        self.assertEqual(response.status_code, 302)
+        result = Result.objects.get(application=app)
+        self.assertEqual((result.place, result.score), (1, Decimal('142.50')))
+
+    def test_census_api_applies_municipality_and_age_filters(self):
+        self.athlete.municipality = 'Оренбург'
+        self.athlete.birth_date = date(self.today.year - 30, 1, 1)
+        self.athlete.save()
+        self.other.municipality = 'Орск'
+        self.other.birth_date = date(self.today.year - 15, 1, 1)
+        self.other.save()
+        client, _ = self.auth(self.fed)
+        years = {'year_from': self.today.year - 1, 'year_to': self.today.year}
+        cases = [
+            ({'municipality': 'Не существует'}, [0, 0]),
+            ({'municipality': 'Оренбург'}, [1, 1]),
+            ({'municipality': 'Оренбург', 'age_max': 25}, [0, 0]),
+            ({'age_min': 10, 'age_max': 18}, [1, 1]),
+        ]
+        for params, expected in cases:
+            with self.subTest(params=params):
+                response = client.get('/api/v1/reports/athletes-count/', {**years, **params})
+                self.assertEqual(response.status_code, 200, response.data)
+                self.assertEqual([row['total'] for row in response.data['results']], expected)
+        ministry, _ = self.auth(self.ministry)
+        response = ministry.get('/api/v1/reports/athletes-count/', {**years, 'municipality': 'Не существует'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([row['total'] for row in response.data['results']], [0, 0])
+
+    def test_profile_api_uses_unicode_full_name_and_organization_search(self):
+        self.athlete.user.first_name = 'Александр'
+        self.athlete.user.last_name = 'Тестов'
+        self.athlete.user.save()
+        self.athlete.organization = Organization.objects.create(name='Код Оренбуржья', municipality='Оренбург')
+        self.athlete.save()
+        client, _ = self.auth(self.fed)
+        for query in ('александр тестов', 'ТЕСТОВ АЛЕКСАНДР', 'код оренбуржья'):
+            with self.subTest(query=query):
+                response = client.get('/api/v1/athletes/', {'q': query})
+                self.assertEqual(response.status_code, 200, response.data)
+                self.assertEqual([person['id'] for person in response.data['results']], [self.athlete.pk])
+
     def test_partner_import_scope_works_for_approved_applications(self):
         app = self.approved()
         self.comp.state = 'closed'
@@ -180,7 +311,9 @@ class APIIntegrationTests(TestCase):
     def test_event_mapping_signature_queue_and_retry(self):
         endpoint = WebhookEndpoint.objects.create(name='Тест', url='https://hooks.example.test/events',
             events=['protocol.published'], encrypted_key=encrypt_key('test-signing-secret'), created_by=self.fed.user)
-        self.assertIsNone(emit_event('Соревнование: publish_competition', f'competition:{self.comp.pk}'))
+        publication = emit_event('Соревнование: publish_competition', f'competition:{self.comp.pk}')
+        self.assertEqual(publication.event, 'competition.published')
+        self.assertFalse(publication.deliveries.exists())
         event = emit_event('Соревнование: publish', f'competition:{self.comp.pk}')
         self.assertEqual(event.event, 'protocol.published')
         self.assertEqual(WebhookDelivery.objects.count(), 1)
@@ -200,6 +333,24 @@ class APIIntegrationTests(TestCase):
         self.assertEqual(json.loads(body)['id'], str(event.pk))
         self.assertEqual(deliver_pending(), 0)
 
+    @override_settings(INTEGRATION_WEBHOOK_ALLOWED_HOSTS=['hooks.example.test'])
+    def test_real_publication_queues_its_own_webhook_event(self):
+        endpoint = WebhookEndpoint.objects.create(name='Календарь', url='https://hooks.example.test/events',
+            events=['competition.published'], encrypted_key=encrypt_key('publication-test-key'), created_by=self.fed.user)
+        endpoint.full_clean()
+        self.comp.state = 'draft'
+        self.comp.save()
+        client, _ = self.auth(self.fed)
+        response = client.post(f'/api/v1/competitions/{self.comp.pk}/publish/', {}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        event = IntegrationEvent.objects.get(event='competition.published', entity=f'competition:{self.comp.pk}')
+        self.assertEqual(list(event.deliveries.values_list('endpoint_id', flat=True)), [endpoint.pk])
+        self.assertFalse(IntegrationEvent.objects.filter(event='protocol.published').exists())
+        response = client.post(f'/api/v1/competitions/{self.comp.pk}/open-applications/', {}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(IntegrationEvent.objects.filter(event='competition.opened').count(), 1)
+        self.assertEqual(WebhookDelivery.objects.count(), 1)
+
     @override_settings(INTEGRATION_WEBHOOK_ALLOWED_HOSTS=['hooks.example.test', '127.0.0.1'])
     def test_webhook_blocks_unlisted_hosts_private_dns_and_redirect_style_urls(self):
         for url in ['http://hooks.example.test/', 'https://evil.example/', 'https://u:p@hooks.example.test/',
@@ -214,6 +365,14 @@ class APIIntegrationTests(TestCase):
         schema = APIClient().get('/api/v1/schema/')
         self.assertEqual(schema.status_code, 200)
         self.assertEqual(schema.data['openapi'], '3.0.3')
+        paths = schema.data['paths']
+        census_parameters = {p['name'] for p in paths['/api/v1/reports/athletes-count/']['get']['parameters']}
+        self.assertTrue({'municipality', 'age_min', 'age_max'}.issubset(census_parameters))
+        import_body = paths['/api/v1/competitions/{id}/results/import/']['post']['requestBody']
+        imported_row = import_body['content']['application/json']['schema']['properties']['results']['items']
+        self.assertEqual(set(imported_row['required']), {'application', 'place', 'score'})
+        self.assertNotEqual(paths['/api/v1/auth/logout/']['post']['security'], [])
+        self.assertIn('/api/v1/competitions/{id}/protocol/', paths)
         self.client.force_login(self.fed.user)
         self.assertEqual(self.client.get('/integrations/').status_code, 200)
 

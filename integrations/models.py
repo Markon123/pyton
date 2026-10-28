@@ -9,7 +9,7 @@ from django.utils import timezone
 
 
 SCOPES = ('read:competitions', 'read:results', 'results:import')
-EVENTS = ('competition.opened', 'application.approved', 'protocol.published')
+EVENTS = ('competition.published', 'competition.opened', 'application.approved', 'protocol.published')
 
 
 class PartnerToken(models.Model):

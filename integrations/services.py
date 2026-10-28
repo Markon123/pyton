@@ -1,11 +1,13 @@
 """Durable integration events and atomic result imports; network only in delivery command."""
 import base64
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 import hashlib
 import hmac
 import http.client
 import ipaddress
 import json
+import re
 import socket
 import ssl
 from urllib.parse import urlsplit
@@ -17,7 +19,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from federation.models import Application, AuditLog, Competition, Result
-from .models import IntegrationEvent, WebhookDelivery, WebhookEndpoint
+from .models import EVENTS, IntegrationEvent, WebhookDelivery, WebhookEndpoint
 
 
 def encrypt_key(raw):
@@ -59,8 +61,10 @@ def validate_webhook_url(url, resolve=False):
 
 def emit_event(action, entity, detail='', actor=None):
     event = None
-    if action in ('competition.opened', 'application.approved', 'protocol.published'):
+    if action in EVENTS:
         event = action
+    elif entity.startswith('competition:') and action == 'Соревнование: publish_competition':
+        event = 'competition.published'
     elif entity.startswith('competition:') and (action == 'Соревнование: publish' or 'Опубликован протокол' in action):
         event = 'protocol.published'
     elif entity.startswith('competition:') and (action in ('Соревнование: open', 'Соревнование: reopen') or 'Открыт приём' in action):
@@ -132,6 +136,37 @@ def deliver_pending(limit=50):
     return sent
 
 
+def _positive_integer(value, field):
+    """Accept integer JSON values and integer CSV cells without truncation."""
+    if type(value) is int:
+        number = value
+    elif isinstance(value, str) and re.fullmatch(r'\+?[0-9]+', value.strip()):
+        try:
+            number = int(value.strip())
+        except ValueError:
+            raise ValidationError(f'{field}: требуется положительное целое число.')
+    else:
+        raise ValidationError(f'{field}: требуется положительное целое число.')
+    if number < 1:
+        raise ValidationError(f'{field}: требуется положительное целое число.')
+    return number
+
+
+def _score(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float, Decimal, str)):
+        raise ValidationError('score: требуется конечное неотрицательное число.')
+    text = str(value).strip()
+    if not re.fullmatch(r'[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?', text):
+        raise ValidationError('score: требуется конечное неотрицательное число.')
+    try:
+        number = Decimal(text)
+    except (InvalidOperation, ValueError):
+        raise ValidationError('score: требуется конечное неотрицательное число.')
+    if not number.is_finite() or number < 0:
+        raise ValidationError('score: требуется конечное неотрицательное число.')
+    return number
+
+
 @transaction.atomic
 def import_results(competition, rows, user):
     competition = Competition.objects.select_for_update().get(pk=competition.pk)
@@ -142,11 +177,11 @@ def import_results(competition, rows, user):
     applications = {a.pk: a for a in Application.objects.filter(competition=competition, status='approved')}
     seen, slots, prepared = set(), set(), []
     for row in rows:
-        try:
-            application_id = int(row['application'])
-            place = int(row['place'])
-        except (KeyError, TypeError, ValueError):
+        if not isinstance(row, dict) or not {'application', 'place', 'score'}.issubset(row):
             raise ValidationError('Каждая строка требует application, place и score.')
+        application_id = _positive_integer(row['application'], 'application')
+        place = _positive_integer(row['place'], 'place')
+        score = _score(row['score'])
         if application_id in seen or application_id not in applications:
             raise ValidationError('Заявка не одобрена для этого соревнования или повторяется.')
         app = applications[application_id]
@@ -156,7 +191,7 @@ def import_results(competition, rows, user):
         seen.add(application_id)
         slots.add(slot)
         result = Result.objects.filter(application=app).first() or Result(application=app)
-        result.place, result.score = place, row.get('score', 0)
+        result.place, result.score = place, score
         prepared.append(result)
     # Validate the final placing set, allowing a whole imported table to swap existing places.
     retained = Result.objects.filter(application__competition=competition).exclude(application_id__in=seen)

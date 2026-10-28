@@ -1,0 +1,12 @@
+{% extends 'federation/base.html' %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">УВЕДОМЛЕНИЯ</span><h1>Почтовые уведомления</h1><p>Проверьте внешний канал и состояние отправки.</p></div><a class="button secondary" href="{% url 'notifications' %}">К уведомлениям</a></div>
+<section class="panel detail-section">
+  {% if mail_configured %}<span class="badge active">Почтовый сервис указан</span><h2>Проверка передачи письма</h2><p>Тест отправляется только на адрес вашего профиля. Состояние «Принято почтовым сервером» подтверждает передачу серверу; получение проверьте в почтовом ящике, включая папку «Спам».</p>
+  {% else %}<span class="badge pending">Внешняя почта не настроена</span><h2>Локальное сохранение писем</h2><p>Внутренние уведомления работают. Сохранение письма локально не подтверждает доставку на внешний адрес. Для внешней отправки подключите почтовый сервис по <a href="https://github.com/Markon123/pyton/blob/main/docs/mail.md">инструкции настройки</a>.</p>{% endif %}
+  {% if not has_own_email %}<p class="notice">В вашем профиле не указан адрес электронной почты. <a href="{% url 'profile' %}">Заполнить профиль</a></p>{% endif %}
+  <form method="post">{% csrf_token %}<button class="button primary" type="submit" {% if not mail_configured or not has_own_email %}disabled{% endif %}>Отправить тест на мою почту</button></form>
+</section>
+<section class="panel detail-section"><h2>Ваши проверки</h2><p class="muted">Здесь показаны только тесты, запрошенные вами.</p><div class="table-scroll"><table><thead><tr><th>Создано</th><th>Состояние</th><th>Попыток</th></tr></thead><tbody>{% for item in own_tests %}<tr><td>{{ item.created_at|date:'d.m.Y H:i' }}</td><td>{{ item.delivery_label }}</td><td>{{ item.email_attempts }}</td></tr>{% empty %}<tr><td colspan="3">Тестов пока нет.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel detail-section"><h2>Очередь уведомлений платформы</h2><div class="table-scroll"><table><thead><tr><th>Состояние</th><th>Количество</th></tr></thead><tbody>{% for state in states %}<tr><td>{{ state.label }}</td><td>{{ state.total }}</td></tr>{% endfor %}</tbody></table></div><p class="small-muted">При временном сбое планировщик повторяет отправку. Адреса и содержание чужих писем на этой странице не показываются.</p></section>
+{% endblock %}

@@ -5,6 +5,14 @@ from django.db import models
 
 
 FORMATS = [('xlsx', 'Excel · XLSX'), ('docx', 'Word · DOCX'), ('pdf', 'PDF')]
+REPORT_KINDS = [
+    ('census', 'Численность занимающихся'),
+    ('protocol', 'Протокол соревнования'),
+    ('athlete', 'История выступлений спортсмена'),
+    ('team', 'Состав сборной и проект приказа'),
+    ('judging-panel', 'Состав судейской коллегии'),
+    ('judging-history', 'История судейства'),
+]
 
 
 class ReportJob(models.Model):
@@ -31,6 +39,14 @@ class ReportJob(models.Model):
     def clean(self):
         from .forms import validate_saved_params
         validate_saved_params(self.params, self.format)
+
+    @property
+    def kind(self):
+        # Existing census jobs keep their original parameter shape.
+        return self.params.get('kind', 'census') if isinstance(self.params, dict) else 'unknown'
+
+    def get_kind_display(self):
+        return dict(REPORT_KINDS).get(self.kind, 'Неизвестный отчёт')
 
     def __str__(self):
         return f'{self.number} · {self.get_status_display()}'

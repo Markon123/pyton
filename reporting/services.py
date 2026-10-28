@@ -5,11 +5,13 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
+from django.test.client import RequestFactory
 from django.utils import timezone
 
-from federation.documents import build_document
+from federation.documents import build_document, CONTENT_TYPES
 from federation.services import census, census_breakdown, layout_document
 from .forms import validate_saved_params
 from .models import ReportJob
@@ -49,11 +51,47 @@ def build_census(job):
     split = census_breakdown(p['year_from'], p['year_to'], p['discipline'], p['organization'], **extra)
     rows = [[r['year'], 'Всего', 'Регион', r['total']] for r in counts]
     rows += [[r['year'], r['dimension'], r['label'], r['total']] for r in split]
-    title, subtitle = layout_document('census', 'Динамика численности занимающихся',
+    title, subtitle = layout_document('census', 'Численность занимающихся спортивным программированием в Оренбургской области',
         'Фоновый отчёт. Источник: интервалы зачисления в группы; для периодов до начала истории — интервалы реестра. '
         'Возраст на 31 декабря отчётного года. Итог считает уникальных спортсменов; разрезы могут пересекаться.')
     # build_document creates document bytes inside this process; no HTTP request or server is used.
     response = build_document('census', job.format, title, ['Год', 'Разрез', 'Группа', 'Число спортсменов'], rows, subtitle)
+    return response.content
+
+
+def current_federation_user(job):
+    # A task is not an enduring permission grant: role revocation or disabling
+    # the account also revokes queued generation, not only HTTP downloads.
+    user = get_user_model().objects.select_related('profile').filter(pk=job.user_id, is_active=True).first()
+    person = getattr(user, 'profile', None)
+    if not user or not person or 'federation' not in person.roles:
+        raise PermissionDenied('Для формирования отчёта необходима действующая роль федерации.')
+    from federation.models import ProvisionedAccount
+    if ProvisionedAccount.objects.filter(user=user, must_change_password=True).exists():
+        raise PermissionDenied('Завершите первый вход перед формированием отчётов.')
+    return user
+
+
+def build_report(job):
+    user = current_federation_user(job)
+    validate_saved_params(job.params, job.format)
+    if job.kind == 'census':
+        return build_census(job)
+    # Reuse the real role-scoped document views in-process. RequestFactory only
+    # constructs a GET request; it makes no network request and skips no view
+    # permission checks. Persisted parameters have a strict, validated schema.
+    request = RequestFactory().get('/', {'preview': '1'} if job.kind == 'protocol' else {})
+    request.user = user
+    request.active_role = 'federation'
+    request.session = {'active_role': 'federation'}
+    if job.kind in ('judging-panel', 'judging-history'):
+        from development.views import judging_document
+        response = judging_document(request, kind=job.kind.removeprefix('judging-'), pk=job.params['object_id'], fmt=job.format)
+    else:
+        from federation.views import export_document
+        response = export_document(request, kind=job.kind, pk=job.params['object_id'], fmt=job.format)
+    if response.status_code != 200 or response.get('Content-Type') != CONTENT_TYPES[job.format]:
+        raise ValidationError('Документ недоступен для формирования.')
     return response.content
 
 
@@ -74,12 +112,16 @@ def process_reports(limit=5):
                     lease_expires_at=now + LEASE, claim_token=token, filename='', error='')
         if not changed:
             continue
-        job = ReportJob.objects.get(pk=pk)
+        try:
+            job = ReportJob.objects.get(pk=pk)
+        except ReportJob.DoesNotExist:
+            continue
         temporary = None
         destination = None
         accepted = False
         try:
-            content = build_census(job)
+            content = build_report(job)
+            current_federation_user(job)
             directory = report_directory()
             destination = directory / expected_filename(job)
             # Each lease writes a distinct claim filename. A stale worker cannot

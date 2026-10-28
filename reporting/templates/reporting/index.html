@@ -1,1 +1,20 @@
-{% extends 'federation/base.html' %}{% block content %}<div class="page-heading"><div><h1>Фоновые отчёты</h1><p>Большие выгрузки формируются планировщиком. Можно продолжить работу и скачать результат позже.</p></div></div><div class="detail-layout"><section class="panel detail-section"><h2>Мои задачи</h2><div class="table-scroll"><table><thead><tr><th>Создан</th><th>Формат</th><th>Состояние</th><th></th></tr></thead><tbody>{% for item in jobs %}<tr><td>{{ item.created_at|date:'d.m.Y H:i' }}</td><td>{{ item.format|upper }}</td><td>{{ item.get_status_display }}</td><td><a href="{% url 'reporting:job' item.number %}">Открыть</a></td></tr>{% empty %}<tr><td colspan="4">Задач пока нет.</td></tr>{% endfor %}</tbody></table></div></section><section class="panel detail-section"><h2>Новая выгрузка численности</h2><form class="form-stack" method="post" action="{% url 'reporting:create' %}">{% csrf_token %}{{ form.as_p }}<button class="button primary" type="submit">Сформировать в фоне</button></form></section></div>{% endblock %}
+{% extends 'federation/base.html' %}
+{% block content %}
+<div class="page-heading"><div><h1>Фоновые отчёты</h1><p>Выберите документ. После формирования файл появится в вашей задаче; во время ожидания можно продолжить работу.</p></div></div>
+<form method="get" class="panel filter-bar">
+  <label class="grow"><span class="field-caption">Вид документа</span><select name="kind">{% for value,label in kinds %}<option value="{{ value }}" {% if value == selected_kind %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <button class="button secondary" type="submit">Показать настройки</button>
+</form>
+<div class="detail-layout">
+  <section class="panel detail-section"><h2>Мои задачи</h2><div class="table-scroll"><table><thead><tr><th>Создана</th><th>Документ</th><th>Формат</th><th>Состояние</th><th></th></tr></thead><tbody>
+    {% for item in jobs %}<tr><td>{{ item.created_at|date:'d.m.Y H:i' }}</td><td>{{ item.get_kind_display }}</td><td>{{ item.format|upper }}</td><td>{{ item.get_status_display }}</td><td><a href="{% url 'reporting:job' item.number %}">Открыть</a></td></tr>{% empty %}<tr><td colspan="5">Задач пока нет.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <section class="panel detail-section"><h2>{{ kind_label }}</h2>
+    {% if selected_kind == 'protocol' %}<p class="muted">Можно выбрать опубликованный протокол или предварительный протокол закрытого соревнования с полностью внесёнными результатами.</p>{% endif %}
+    <form class="form-stack" method="post" action="{% url 'reporting:create' %}">{% csrf_token %}
+      {% if selected_kind == 'census' %}<input type="hidden" name="kind" value="census">{% endif %}
+      {{ form.as_p }}<button class="button primary" type="submit">Сформировать в фоне</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

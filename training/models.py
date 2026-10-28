@@ -200,6 +200,7 @@ class AssessmentResult(models.Model):
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     threshold_snapshot = models.DecimalField('Порог на дату записи', max_digits=12, decimal_places=3, editable=False, default=0)
     direction_snapshot = models.CharField('Условие на дату записи', max_length=3, editable=False, default='gte')
+    norm_snapshot = models.JSONField('Норматив и источник на дату записи', default=dict, blank=True, editable=False)
 
     class Meta:
         ordering = ['-tested_on', '-id']
@@ -235,12 +236,22 @@ class AssessmentResult(models.Model):
             if not valid_enrollment:
                 raise ValidationError({'athlete': 'На дату сдачи нет зачисления с подходящими дисциплиной, этапом и полом.'})
             if not self.pk:
-                self.threshold_snapshot = self.norm.threshold
-                self.direction_snapshot = self.norm.direction
+                self.capture_norm_snapshot()
+
+    def capture_norm_snapshot(self):
+        """Record provenance once; later dictionary edits cannot rewrite it."""
+        self.threshold_snapshot, self.direction_snapshot = self.norm.threshold, self.norm.direction
+        self.norm_snapshot = {
+            'name': self.norm.name, 'unit': self.norm.unit, 'source': self.norm.source,
+            'demonstration': self.norm.demonstration, 'discipline_id': self.norm.discipline_id,
+            'discipline_name': self.norm.discipline.name, 'stage': self.norm.stage,
+            'stage_label': self.norm.get_stage_display(), 'sex': self.norm.sex,
+            'required': self.norm.required,
+        }
 
     def save(self, *args, **kwargs):
         if not self.pk and self.norm_id:
-            self.threshold_snapshot, self.direction_snapshot = self.norm.threshold, self.norm.direction
+            self.capture_norm_snapshot()
         return super().save(*args, **kwargs)
 
 

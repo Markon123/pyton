@@ -51,26 +51,7 @@ class FederationBootstrapTests(TestCase):
         self.assertEqual(Discipline.objects.get(pk=discipline.pk).name, 'Название федерации')
         self.assertEqual(Discipline.objects.count(), 6)
 
-    def test_initial_account_has_hashed_password_consent_and_no_staff_bypass(self):
-        output = StringIO()
-        with patch('federation.management.commands.bootstrap_federation.getpass', return_value='StrongFspPass9!local'), patch('builtins.input', return_value='да'):
-            call_command('bootstrap_federation', username='owner', email='owner@example.test', stdout=output)
-        user = get_user_model().objects.get(username='owner')
-        self.assertTrue(user.check_password('StrongFspPass9!local'))
-        self.assertFalse(user.is_staff)
-        self.assertFalse(user.is_superuser)
-        self.assertEqual(user.profile.roles, ['federation'])
-        self.assertTrue(Consent.objects.filter(user=user, kind='personal_data').exists())
-        self.assertNotIn('StrongFspPass9!local', output.getvalue())
-
-    def test_existing_federation_and_missing_consent_are_preserved(self):
-        user = get_user_model().objects.create_user('existing')
-        Profile.objects.create(user=user, roles=['federation'])
+    def test_direct_federation_bootstrap_cannot_bypass_ministry(self):
         with self.assertRaises(CommandError):
-            call_command('bootstrap_federation', username='second', email='second@example.test')
-        self.assertEqual(get_user_model().objects.count(), 1)
-        user.profile.delete()
-        with patch('federation.management.commands.bootstrap_federation.getpass', return_value='StrongFspPass9!local'), patch('builtins.input', return_value='нет'):
-            with self.assertRaises(CommandError):
-                call_command('bootstrap_federation', username='second', email='second@example.test')
-        self.assertEqual(get_user_model().objects.count(), 1)
+            call_command('bootstrap_federation', username='owner', email='owner@example.test')
+        self.assertFalse(get_user_model().objects.exists())

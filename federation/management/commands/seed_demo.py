@@ -115,6 +115,7 @@ class Command(BaseCommand):
                 'registration_opens': starts - timedelta(days=30), 'registration_closes': starts - timedelta(days=2),
                 'location': 'Демоцентр «Код Оренбуржья», Оренбург', 'format': 'hybrid',
                 'level': level, 'kind': 'Кубок' if index != 1 else 'Чемпионат',
+                'calendar_plan': 'regional' if level == 'regional' else 'ekp',
                 'age_min': 12, 'age_max': 99, 'plan_number': f'ДЕМО-{year}-{index + 1:03}',
                 'state': 'finished', 'protocol_published': True,
             })
@@ -143,6 +144,7 @@ class Command(BaseCommand):
                 'location': ['Оренбург · Демоцентр «Код Оренбуржья»', 'Онлайн · демоплощадка', 'Орск · Демошкола цифрового спорта'][index % 3],
                 'format': ['offline', 'hybrid', 'online'][index % 3],
                 'level': 'interregional' if index == 1 else 'regional', 'kind': 'Чемпионат' if index == 0 else 'Кубок',
+                'calendar_plan': 'ekp' if index == 1 else 'regional',
                 'age_min': 12, 'age_max': 99, 'plan_number': f'ДЕМО-{year}-{index + 10:03}', 'state': 'open',
             })
             if created:

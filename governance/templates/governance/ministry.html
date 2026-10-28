@@ -1,5 +1,5 @@
 {% extends 'federation/base.html' %}
-{% block content %}
+{% block content %}<p><a class="button primary" href="{% url 'federation_accounts' %}">Управление аккаунтами федераций</a></p>
 <div class="page-heading"><div><span class="eyebrow">МИНИСТЕРСТВО СПОРТА · ТОЛЬКО ЧТЕНИЕ</span><h1>Развитие цифрового спорта</h1><p>Сводные показатели, календарь и составы сборной Оренбургской области.</p></div></div>
 <form method="get" class="panel filter-bar"><label>Отчётный год<input type="number" min="1900" max="2100" name="year" value="{{ year }}"></label><button class="button dark">Показать</button><a class="button secondary" href="{% url 'reports' %}?year_from={{ year|add:'-1' }}&year_to={{ year }}">Подробный отчёт</a></form>
 <div class="stats-grid">{% for count in counts %}<article class="stat-card"><div class="stat-top">Численность · {{ count.year }}</div><strong>{{ count.total }}</strong><small>Уникальные спортсмены</small></article>{% endfor %}<article class="stat-card"><div class="stat-top">Соревнования · {{ year }}</div><strong>{{ competitions|length }}</strong><small>Опубликованные соревнования</small></article><article class="stat-card"><div class="stat-top">Организации</div><strong>{{ organizations|length }}</strong><small>Записи реестра</small></article></div>

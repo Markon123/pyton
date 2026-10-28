@@ -72,8 +72,11 @@ class PlatformTests(TestCase):
             title='Вымышленный чемпионат', starts_on=self.today, ends_on=self.today,
             registration_opens=self.today - timedelta(days=14), registration_closes=self.today,
             location='Учебный стенд', state='open', age_min=12, age_max=99,
+            plan_number='TEST-PLAN-001',
         )
         fields.update(overrides)
+        if 'calendar_plan' not in overrides:
+            fields['calendar_plan'] = 'regional' if fields.get('level', 'regional') == 'regional' else 'ekp'
         competition = Competition.objects.create(**fields)
         competition.disciplines.add(self.discipline)
         return competition

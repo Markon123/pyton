@@ -2,7 +2,7 @@ from io import BytesIO
 from zipfile import ZipFile
 
 from django.http import Http404
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 from docx import Document
 from openpyxl import load_workbook
 
@@ -32,6 +32,7 @@ class DocumentExportTests(SimpleTestCase):
             self.assertEqual(sheet[address].data_type, "s")
             self.assertTrue(sheet[address].value.startswith("'"))
 
+    @override_settings(FSP_DEMO_MODE=True)
     def test_docx_has_document_table_and_demo_disclaimer(self):
         response = self.export("docx")
         document = Document(BytesIO(response.content))
@@ -39,6 +40,13 @@ class DocumentExportTests(SimpleTestCase):
         self.assertIn(DISCLAIMER, document.sections[0].footer.paragraphs[0].text)
         with ZipFile(BytesIO(response.content)) as archive:
             self.assertIn(b"tblHeader", archive.read("word/document.xml"))
+
+    @override_settings(FSP_DEMO_MODE=False)
+    def test_working_document_does_not_claim_real_data_is_demonstration(self):
+        document = Document(BytesIO(self.export('docx').content))
+        footer = document.sections[0].footer.paragraphs[0].text
+        self.assertNotIn(DISCLAIMER, footer)
+        self.assertIn('ОренКод', footer)
 
     def test_pdf_has_embedded_cyrillic_font_and_valid_header(self):
         response = self.export("pdf", [[1, "Тестовый <спортсмен> & команда", 45]])

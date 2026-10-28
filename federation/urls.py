@@ -3,12 +3,20 @@ from django.urls import path
 
 from . import views
 from .configuration import configuration
+from .deadlines import deadline_list, deadline_complete
+from .mail_status import mail_status
+from .administration import (account_activation, federation_accounts,
+                             federation_account_status, federation_account_reset)
 
 urlpatterns = [
     path('configuration/', configuration, name='configuration'),
     path('login/', LoginView.as_view(template_name='federation/login.html'), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('register/', views.register, name='register'),
+    path('account/activate/', account_activation, name='account_activation'),
+    path('administration/federations/', federation_accounts, name='federation_accounts'),
+    path('administration/federations/<int:pk>/status/', federation_account_status, name='federation_account_status'),
+    path('administration/federations/<int:pk>/password/', federation_account_reset, name='federation_account_reset'),
     path('switch-role/', views.switch_role, name='switch_role'),
     path('', views.dashboard, name='dashboard'),
     path('competitions/', views.competitions, name='competitions'),
@@ -26,6 +34,9 @@ urlpatterns = [
     path('registry/<int:pk>/', views.athlete_detail, name='athlete_detail'),
     path('registry/<int:pk>/edit/', views.profile_edit, name='profile_edit'),
     path('organizations/new/', views.organization_create, name='organization_create'),
+    path('organizations/<int:pk>/', views.organization_detail, name='organization_detail'),
+    path('report-deadlines/', deadline_list, name='report_deadlines'),
+    path('report-deadlines/<int:pk>/complete/', deadline_complete, name='report_deadline_complete'),
     path('profile/', views.profile, name='profile'),
     path('qualifications/', views.qualifications, name='qualifications'),
     path('qualifications/<int:pk>/review/', views.qualification_review, name='qualification_review'),
@@ -37,6 +48,7 @@ urlpatterns = [
     path('reports/', views.reports, name='reports'),
     path('documents/<str:kind>/<int:pk>/<str:fmt>/', views.export_document, name='export_document'),
     path('notifications/', views.notifications, name='notifications'),
+    path('notifications/mail/', mail_status, name='mail_status'),
     path('audit/', views.audit_log, name='audit'),
     path('guide/', views.guide, name='guide'),
     path('health/', views.health, name='health'),

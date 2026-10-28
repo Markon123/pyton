@@ -12,7 +12,7 @@ from unittest.mock import patch
 from aiosmtpd.controller import Controller
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.db import close_old_connections
+from django.db import close_old_connections, connections
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
@@ -148,7 +148,9 @@ class ConcurrentMailDeliveryTests(TransactionTestCase):
             try:
                 return deliver_notification(item.pk)
             finally:
-                close_old_connections()
+                # This pool thread terminates after the test. A healthy
+                # persistent PostgreSQL connection must still be closed here.
+                connections['default'].close()
 
         with patch('federation.mail_delivery.send_mail', side_effect=transport) as send, ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(worker)

@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (
     Application, AuditLog, CoachLink, Competition, Consent, Discipline,
     JudgeAssignment, Notification, Organization, Profile, RankApplication,
-    RatingRule, Result, Team,
+    RatingRule, ReportDeadline, Result, Team,
 )
 
 
@@ -41,6 +41,14 @@ class AuditLogAdmin(admin.ModelAdmin):
 
 for model in [Discipline, Organization, Application, Result, RankApplication, CoachLink, JudgeAssignment, Team, Notification, Consent, RatingRule]:
     admin.site.register(model)
+
+
+@admin.register(ReportDeadline)
+class ReportDeadlineAdmin(admin.ModelAdmin):
+    list_display = ['title', 'due_on', 'active', 'completed_at']
+    list_filter = ['active', 'due_on']
+    filter_horizontal = ['recipients']
+    search_fields = ['title', 'description']
 
 admin.site.site_header = 'ФСП • Управление платформой'
 admin.site.site_title = 'ФСП Оренбург'

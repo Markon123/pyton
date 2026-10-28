@@ -30,7 +30,16 @@ jobs:
       - run: python manage.py seed_governance
       - run: python manage.py seed_development
       - run: python manage.py test --verbosity=2
-      - run: python scripts/launch_demo.py --check-only
+      - run: python scripts/launch.py --check-only
+        env:
+          DATABASE_PATH: .local/ci-platform.sqlite3
+      - name: Check Windows start.bat entrypoint
+        if: runner.os == 'Windows'
+        shell: cmd
+        timeout-minutes: 5
+        run: call start.bat --check-only
+        env:
+          DATABASE_PATH: .local/ci-platform.sqlite3
       - run: python manage.py backup_database --output .local/ci-sqlite-backup.sqlite3
   postgresql:
     runs-on: ubuntu-latest

@@ -1,0 +1,11 @@
+{% extends 'federation/base.html' %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">МОЙ КАБИНЕТ</span><h1>Мои персональные данные</h1><p>Скачайте свои сведения или направьте обращение в федерацию.</p></div></div>
+<div class="detail-layout"><div class="detail-main">
+<section class="panel detail-section"><h2>Копия моих данных</h2><p>Сведения аккаунта, согласия, заявки, результаты, квалификации и история подготовки доступны одним файлом JSON. Файл содержит личные сведения — храните его у себя.</p><a class="button primary" href="{% url 'privacy_requests:export' %}">Скачать мои данные</a></section>
+<section class="panel detail-section"><h2>Обращение об удалении</h2><p>Федерация рассмотрит обращение и сообщит решение. Отправка обращения и его согласование сами по себе не удаляют записи. Порядок исполнения зависит от требований к хранению спортивных документов.</p>
+{% if current %}<p>У вас есть открытое обращение: <a href="{% url 'privacy_requests:detail' current.pk %}">№ {{ current.pk }} · {{ current.get_status_display }}</a>.</p>{% else %}<form method="post" class="form-stack">{% csrf_token %}{{ form.as_p }}<button class="button primary" type="submit">Направить обращение</button></form>{% endif %}</section>
+<section class="panel detail-section"><h2>Мои обращения</h2>{% for item in my_requests %}<article class="qualification-card"><a class="table-name" href="{% url 'privacy_requests:detail' item.pk %}">Обращение № {{ item.pk }}</a><p>{{ item.get_status_display }} · {{ item.created_at|date:'d.m.Y H:i' }}</p></article>{% empty %}<p class="muted">Вы ещё не направляли обращений.</p>{% endfor %}</section></div>
+{% if all_requests != None %}<aside class="detail-aside"><section class="panel detail-section"><span class="eyebrow">ФЕДЕРАЦИЯ</span><h2>Обращения пользователей</h2>{% for item in all_requests %}<article class="qualification-card"><a class="table-name" href="{% url 'privacy_requests:detail' item.pk %}">Обращение № {{ item.pk }}</a><p>{{ item.user.get_full_name|default:item.user.username|default:'Аккаунт удалён' }}</p><p>{{ item.get_status_display }} · {{ item.created_at|date:'d.m.Y H:i' }}</p></article>{% empty %}<p class="muted">Обращений пока нет.</p>{% endfor %}</section></aside>{% endif %}
+</div>
+{% endblock %}
