@@ -1,6 +1,7 @@
 .git
 .env.*
 docs/demo.webm
+docs/*.mp4
 .local
 .venv
 venv
