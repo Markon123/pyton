@@ -1,0 +1,628 @@
+{
+  "successful": true,
+  "sourceCommit": "953b71b3f647cd47d03dae2e12e758b9a0c6d09f",
+  "sourceCommitUrl": "https://github.com/Markon123/pyton/tree/953b71b3f647cd47d03dae2e12e758b9a0c6d09f",
+  "originalCheckpointVideo": {
+    "file": "checkpoint-2.mp4",
+    "gitBlob": "dfbd4489c6c89ff779da65f71866fcb658b2c270",
+    "sha256": "28538cc9f6858ca05b4d0b6f679b704b88d06363692b416706dd64965cf7b28c",
+    "durationSeconds": 124.88,
+    "cutStartSeconds": 9.0,
+    "cutEndSeconds": 124.88
+  },
+  "historicalBrowserRecording": {
+    "sha256": "2c679b6470267046617777ed62c199cdc0490419a023b707bd0a23e010f3e2be",
+    "durationSeconds": 146.2,
+    "successful": true,
+    "errors": []
+  },
+  "editing": "Historical UI montage with six separately timed core steps; supplementary cuts are slowed by at most 2x or accelerated to fit, retaining a final frame only when needed.",
+  "sha256": "89474a332bf42d572dca387f70b299fb61239ed7aae9f5f44024a3b21f2055b0",
+  "bytes": 9713851,
+  "durationSeconds": 270.0,
+  "resolution": {
+    "width": 1440,
+    "height": 960
+  },
+  "codecs": {
+    "video": "h264",
+    "audio": "aac",
+    "audioSampleRate": 44100,
+    "audioChannels": 1,
+    "subtitles": "mov_text",
+    "subtitleLanguage": "rus"
+  },
+  "counts": {
+    "chapters": 12,
+    "downloads": 4,
+    "sourceCuts": 17,
+    "voiceSegments": 17,
+    "subtitleCues": 32,
+    "browserErrors": 0
+  },
+  "voice": {
+    "model": "vits-piper-ru_RU-ruslan-medium",
+    "corpus": "RUSLAN",
+    "license": "CC BY-NC-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+    "synthesizedLocally": true,
+    "clips": [
+      {
+        "scene": "intro",
+        "unit": "intro",
+        "part": null,
+        "startSeconds": 0.25,
+        "durationSeconds": 6.8978,
+        "originalDurationSeconds": 6.8978,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "core",
+        "unit": "core-1",
+        "part": 1,
+        "startSeconds": 8.25,
+        "durationSeconds": 8.4652,
+        "originalDurationSeconds": 8.4652,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "core",
+        "unit": "core-2",
+        "part": 2,
+        "startSeconds": 20.25,
+        "durationSeconds": 6.2462,
+        "originalDurationSeconds": 6.2462,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "core",
+        "unit": "core-3",
+        "part": 3,
+        "startSeconds": 29.25,
+        "durationSeconds": 4.6449,
+        "originalDurationSeconds": 4.6449,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "core",
+        "unit": "core-4",
+        "part": 4,
+        "startSeconds": 36.25,
+        "durationSeconds": 3.5759,
+        "originalDurationSeconds": 3.5759,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "core",
+        "unit": "core-5",
+        "part": 5,
+        "startSeconds": 44.25,
+        "durationSeconds": 13.562,
+        "originalDurationSeconds": 13.562,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "core",
+        "unit": "core-6",
+        "part": 6,
+        "startSeconds": 64.25,
+        "durationSeconds": 7.9023,
+        "originalDurationSeconds": 7.9023,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "rating",
+        "unit": "rating",
+        "part": null,
+        "startSeconds": 78.25,
+        "durationSeconds": 18.4134,
+        "originalDurationSeconds": 18.4134,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "registry",
+        "unit": "registry",
+        "part": null,
+        "startSeconds": 103.25,
+        "durationSeconds": 18.7056,
+        "originalDurationSeconds": 18.7056,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "ministry",
+        "unit": "ministry",
+        "part": null,
+        "startSeconds": 135.25,
+        "durationSeconds": 11.7077,
+        "originalDurationSeconds": 11.7077,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "identity",
+        "unit": "identity",
+        "part": null,
+        "startSeconds": 151.25,
+        "durationSeconds": 17.2358,
+        "originalDurationSeconds": 17.2358,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "training",
+        "unit": "training",
+        "part": null,
+        "startSeconds": 175.25,
+        "durationSeconds": 19.1479,
+        "originalDurationSeconds": 19.1479,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "appeal",
+        "unit": "appeal",
+        "part": null,
+        "startSeconds": 199.25,
+        "durationSeconds": 12.9338,
+        "originalDurationSeconds": 12.9338,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "development",
+        "unit": "development",
+        "part": null,
+        "startSeconds": 215.25,
+        "durationSeconds": 17.1015,
+        "originalDurationSeconds": 17.1015,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "qr",
+        "unit": "qr",
+        "part": null,
+        "startSeconds": 235.25,
+        "durationSeconds": 10.5841,
+        "originalDurationSeconds": 10.5841,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "guidejudge",
+        "unit": "guidejudge",
+        "part": null,
+        "startSeconds": 251.25,
+        "durationSeconds": 10.6928,
+        "originalDurationSeconds": 10.6928,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      },
+      {
+        "scene": "outro",
+        "unit": "outro",
+        "part": null,
+        "startSeconds": 265.25,
+        "durationSeconds": 3.7965,
+        "originalDurationSeconds": 3.7965,
+        "tempo": 1.0,
+        "trailingPaddingTrimmedSeconds": 0.0
+      }
+    ],
+    "normalization": "loudnorm I=-18 LUFS, TP=-1.5 dBTP, LRA=11"
+  },
+  "subtitleTiming": "Estimated speech progress within each narrated scene; not word-level alignment.",
+  "chapters": [
+    {
+      "id": "intro",
+      "title": "ОренКод · второй чекпоинт",
+      "startSeconds": 0.0,
+      "endSeconds": 8.0,
+      "time": "00:00"
+    },
+    {
+      "id": "core",
+      "title": "Полный цикл соревнования",
+      "startSeconds": 8.0,
+      "endSeconds": 78.0,
+      "time": "00:08"
+    },
+    {
+      "id": "rating",
+      "title": "Рейтинг и сборная",
+      "startSeconds": 78.0,
+      "endSeconds": 103.0,
+      "time": "01:18"
+    },
+    {
+      "id": "registry",
+      "title": "Реестр и отчёты",
+      "startSeconds": 103.0,
+      "endSeconds": 135.0,
+      "time": "01:43"
+    },
+    {
+      "id": "ministry",
+      "title": "Кабинет министерства",
+      "startSeconds": 135.0,
+      "endSeconds": 151.0,
+      "time": "02:15"
+    },
+    {
+      "id": "identity",
+      "title": "ФСП ID и интеграции",
+      "startSeconds": 151.0,
+      "endSeconds": 175.0,
+      "time": "02:31"
+    },
+    {
+      "id": "training",
+      "title": "Группы, занятия и нормативы",
+      "startSeconds": 175.0,
+      "endSeconds": 199.0,
+      "time": "02:55"
+    },
+    {
+      "id": "appeal",
+      "title": "Апелляция спортсмена",
+      "startSeconds": 199.0,
+      "endSeconds": 215.0,
+      "time": "03:19"
+    },
+    {
+      "id": "development",
+      "title": "Развитие и путь спортсмена",
+      "startSeconds": 215.0,
+      "endSeconds": 235.0,
+      "time": "03:35"
+    },
+    {
+      "id": "qr",
+      "title": "Справка с QR-кодом",
+      "startSeconds": 235.0,
+      "endSeconds": 251.0,
+      "time": "03:55"
+    },
+    {
+      "id": "guidejudge",
+      "title": "Навигатор и судейские документы",
+      "startSeconds": 251.0,
+      "endSeconds": 265.0,
+      "time": "04:11"
+    },
+    {
+      "id": "outro",
+      "title": "Демонстрация завершена",
+      "startSeconds": 265.0,
+      "endSeconds": 270.0,
+      "time": "04:25"
+    }
+  ],
+  "sourceCuts": [
+    {
+      "id": "intro",
+      "scene": "intro",
+      "part": null,
+      "title": "ОренКод · второй чекпоинт",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 0.74,
+      "sourceEndSeconds": 6.789,
+      "recordedEndSeconds": 6.789,
+      "sourceDurationSeconds": 6.049,
+      "outputStartSeconds": 0.0,
+      "outputEndSeconds": 8.0,
+      "outputDurationSeconds": 8.0,
+      "playbackSpeed": 0.756125,
+      "slowedBy": 1.32253265,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "core-1",
+      "scene": "core",
+      "part": 1,
+      "title": "Полный цикл соревнования",
+      "source": "submitted-checkpoint-2.mp4",
+      "sourceStartSeconds": 9.0,
+      "sourceEndSeconds": 27.0,
+      "recordedEndSeconds": 27.0,
+      "sourceDurationSeconds": 18.0,
+      "outputStartSeconds": 8.0,
+      "outputEndSeconds": 20.0,
+      "outputDurationSeconds": 12.0,
+      "playbackSpeed": 1.5,
+      "slowedBy": 1.0,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "core-2",
+      "scene": "core",
+      "part": 2,
+      "title": "Полный цикл соревнования",
+      "source": "submitted-checkpoint-2.mp4",
+      "sourceStartSeconds": 27.0,
+      "sourceEndSeconds": 45.0,
+      "recordedEndSeconds": 45.0,
+      "sourceDurationSeconds": 18.0,
+      "outputStartSeconds": 20.0,
+      "outputEndSeconds": 29.0,
+      "outputDurationSeconds": 9.0,
+      "playbackSpeed": 2.0,
+      "slowedBy": 1.0,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "core-3",
+      "scene": "core",
+      "part": 3,
+      "title": "Полный цикл соревнования",
+      "source": "submitted-checkpoint-2.mp4",
+      "sourceStartSeconds": 45.0,
+      "sourceEndSeconds": 61.0,
+      "recordedEndSeconds": 61.0,
+      "sourceDurationSeconds": 16.0,
+      "outputStartSeconds": 29.0,
+      "outputEndSeconds": 36.0,
+      "outputDurationSeconds": 7.0,
+      "playbackSpeed": 2.28571429,
+      "slowedBy": 1.0,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "core-4",
+      "scene": "core",
+      "part": 4,
+      "title": "Полный цикл соревнования",
+      "source": "submitted-checkpoint-2.mp4",
+      "sourceStartSeconds": 61.0,
+      "sourceEndSeconds": 73.0,
+      "recordedEndSeconds": 73.0,
+      "sourceDurationSeconds": 12.0,
+      "outputStartSeconds": 36.0,
+      "outputEndSeconds": 44.0,
+      "outputDurationSeconds": 8.0,
+      "playbackSpeed": 1.5,
+      "slowedBy": 1.0,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "core-5",
+      "scene": "core",
+      "part": 5,
+      "title": "Полный цикл соревнования",
+      "source": "submitted-checkpoint-2.mp4",
+      "sourceStartSeconds": 73.0,
+      "sourceEndSeconds": 108.0,
+      "recordedEndSeconds": 108.0,
+      "sourceDurationSeconds": 35.0,
+      "outputStartSeconds": 44.0,
+      "outputEndSeconds": 64.0,
+      "outputDurationSeconds": 20.0,
+      "playbackSpeed": 1.75,
+      "slowedBy": 1.0,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "core-6",
+      "scene": "core",
+      "part": 6,
+      "title": "Полный цикл соревнования",
+      "source": "submitted-checkpoint-2.mp4",
+      "sourceStartSeconds": 108.0,
+      "sourceEndSeconds": 124.88,
+      "recordedEndSeconds": 124.88,
+      "sourceDurationSeconds": 16.88,
+      "outputStartSeconds": 64.0,
+      "outputEndSeconds": 78.0,
+      "outputDurationSeconds": 14.0,
+      "playbackSpeed": 1.20571429,
+      "slowedBy": 1.0,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "rating",
+      "scene": "rating",
+      "part": null,
+      "title": "Рейтинг и сборная",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 6.79,
+      "sourceEndSeconds": 15.875,
+      "recordedEndSeconds": 15.875,
+      "sourceDurationSeconds": 9.085,
+      "outputStartSeconds": 78.0,
+      "outputEndSeconds": 103.0,
+      "outputDurationSeconds": 25.0,
+      "playbackSpeed": 0.5,
+      "slowedBy": 2.0,
+      "retainedLastFrameSeconds": 6.83
+    },
+    {
+      "id": "registry",
+      "scene": "registry",
+      "part": null,
+      "title": "Реестр и отчёты",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 15.875,
+      "sourceEndSeconds": 32.203,
+      "recordedEndSeconds": 32.203,
+      "sourceDurationSeconds": 16.328,
+      "outputStartSeconds": 103.0,
+      "outputEndSeconds": 135.0,
+      "outputDurationSeconds": 32.0,
+      "playbackSpeed": 0.51025,
+      "slowedBy": 1.95982362,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "ministry",
+      "scene": "ministry",
+      "part": null,
+      "title": "Кабинет министерства",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 32.203,
+      "sourceEndSeconds": 43.754,
+      "recordedEndSeconds": 43.754,
+      "sourceDurationSeconds": 11.551,
+      "outputStartSeconds": 135.0,
+      "outputEndSeconds": 151.0,
+      "outputDurationSeconds": 16.0,
+      "playbackSpeed": 0.7219375,
+      "slowedBy": 1.38516146,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "identity",
+      "scene": "identity",
+      "part": null,
+      "title": "ФСП ID и интеграции",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 43.754,
+      "sourceEndSeconds": 67.359,
+      "recordedEndSeconds": 67.359,
+      "sourceDurationSeconds": 23.605,
+      "outputStartSeconds": 151.0,
+      "outputEndSeconds": 175.0,
+      "outputDurationSeconds": 24.0,
+      "playbackSpeed": 0.98354167,
+      "slowedBy": 1.01673374,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "training",
+      "scene": "training",
+      "part": null,
+      "title": "Группы, занятия и нормативы",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 67.36,
+      "sourceEndSeconds": 86.654,
+      "recordedEndSeconds": 86.654,
+      "sourceDurationSeconds": 19.294,
+      "outputStartSeconds": 175.0,
+      "outputEndSeconds": 199.0,
+      "outputDurationSeconds": 24.0,
+      "playbackSpeed": 0.80391667,
+      "slowedBy": 1.24391002,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "appeal",
+      "scene": "appeal",
+      "part": null,
+      "title": "Апелляция спортсмена",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 86.655,
+      "sourceEndSeconds": 101.002,
+      "recordedEndSeconds": 101.002,
+      "sourceDurationSeconds": 14.347,
+      "outputStartSeconds": 199.0,
+      "outputEndSeconds": 215.0,
+      "outputDurationSeconds": 16.0,
+      "playbackSpeed": 0.8966875,
+      "slowedBy": 1.11521572,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "development",
+      "scene": "development",
+      "part": null,
+      "title": "Развитие и путь спортсмена",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 101.003,
+      "sourceEndSeconds": 113.286,
+      "recordedEndSeconds": 113.286,
+      "sourceDurationSeconds": 12.283,
+      "outputStartSeconds": 215.0,
+      "outputEndSeconds": 235.0,
+      "outputDurationSeconds": 20.0,
+      "playbackSpeed": 0.61415,
+      "slowedBy": 1.62826671,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "qr",
+      "scene": "qr",
+      "part": null,
+      "title": "Справка с QR-кодом",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 113.286,
+      "sourceEndSeconds": 125.875,
+      "recordedEndSeconds": 125.875,
+      "sourceDurationSeconds": 12.589,
+      "outputStartSeconds": 235.0,
+      "outputEndSeconds": 251.0,
+      "outputDurationSeconds": 16.0,
+      "playbackSpeed": 0.7868125,
+      "slowedBy": 1.27095083,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "guidejudge",
+      "scene": "guidejudge",
+      "part": null,
+      "title": "Навигатор и судейские документы",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 125.875,
+      "sourceEndSeconds": 139.111,
+      "recordedEndSeconds": 139.111,
+      "sourceDurationSeconds": 13.236,
+      "outputStartSeconds": 251.0,
+      "outputEndSeconds": 265.0,
+      "outputDurationSeconds": 14.0,
+      "playbackSpeed": 0.94542857,
+      "slowedBy": 1.05772137,
+      "retainedLastFrameSeconds": 0.0
+    },
+    {
+      "id": "outro",
+      "scene": "outro",
+      "part": null,
+      "title": "Демонстрация завершена",
+      "source": "historical-browser-recording",
+      "sourceStartSeconds": 139.112,
+      "sourceEndSeconds": 146.2,
+      "recordedEndSeconds": 146.282,
+      "sourceDurationSeconds": 7.088,
+      "outputStartSeconds": 265.0,
+      "outputEndSeconds": 270.0,
+      "outputDurationSeconds": 5.0,
+      "playbackSpeed": 1.4176,
+      "slowedBy": 1.0,
+      "retainedLastFrameSeconds": 0.0
+    }
+  ],
+  "downloads": [
+    {
+      "file": "athlete-report.pdf",
+      "bytes": 49061,
+      "sha256": "07de71d4ef8e212e5d4a47068610aef33cc02456c24d4c4e3d9c5d4ad4945763"
+    },
+    {
+      "file": "athlete-count.xlsx",
+      "bytes": 6947,
+      "sha256": "490dd9829e80049e4e0f9942ee0bac6eb2658e39275b372c6af0facd3b6ad20a"
+    },
+    {
+      "file": "participation-qr.pdf",
+      "bytes": 37330,
+      "sha256": "35dd2c77b5b36514a1cf273c7e93a9939809c90a5aaf3c426b51c0ff36aaeb51"
+    },
+    {
+      "file": "judging-history.pdf",
+      "bytes": 49389,
+      "sha256": "939725138bd9a008bf57d8d8ed33a424a4b1a9b9ee7e6baf1b55b5b43b315b99"
+    }
+  ],
+  "validation": {
+    "completeAvDecode": true,
+    "historicalGitBlobMatched": true
+  },
+  "generatedAt": "2026-10-28T21:41:20.887644+00:00"
+}
