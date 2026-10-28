@@ -1,0 +1,464 @@
+{
+  "checked_at_utc": "2026-10-28T08:53:58.995150+00:00",
+  "code_commit": "953b71b3f647cd47d03dae2e12e758b9a0c6d09f",
+  "specification": {
+    "filename": "Кейс_Единая_цифровая_платформа_ФСП_Оренбургская_область_Расширенный (2).md",
+    "bytes": 73950,
+    "sha256": "7afc5f23391a9ec7c1ff27163f76a35598e367a5144c9c8005bf035bfbfe5f4d"
+  },
+  "system_check": "passed",
+  "migration_check": "passed",
+  "tests": {
+    "sqlite": {
+      "count": 147,
+      "seconds": 20.178,
+      "result": "passed"
+    },
+    "postgresql": {
+      "count": 147,
+      "seconds": 26.058,
+      "result": "passed"
+    }
+  },
+  "ci": {
+    "url": "https://github.com/Markon123/pyton/actions/runs/40657387438",
+    "head_sha": "953b71b3f647cd47d03dae2e12e758b9a0c6d09f",
+    "verification": "Public job pages show all steps completed/success. Authenticated log text was not fetched.",
+    "jobs": [
+      {
+        "name": "Ubuntu / SQLite",
+        "id": 122711630626,
+        "successful_steps": 18,
+        "total_steps": 18
+      },
+      {
+        "name": "Windows / SQLite",
+        "id": 122711630245,
+        "successful_steps": 18,
+        "total_steps": 18
+      },
+      {
+        "name": "PostgreSQL",
+        "id": 122711630656,
+        "successful_steps": 16,
+        "total_steps": 16
+      }
+    ]
+  },
+  "browser": {
+    "tested_pages": 13,
+    "widths": [
+      360,
+      768,
+      1280
+    ],
+    "checks": 39,
+    "menu_opened": true,
+    "menu_closed": true,
+    "max_local_navigation_ms": 111,
+    "scope": "Fictional local demo, not production load or ordinary external network. Scrollable tables are allowed.",
+    "results": [
+      {
+        "width": 360,
+        "route": "/",
+        "status": 200,
+        "navigation_ms": 49,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/competitions/",
+        "status": 200,
+        "navigation_ms": 92,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/competitions/1/",
+        "status": 200,
+        "navigation_ms": 85,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/registry/",
+        "status": 200,
+        "navigation_ms": 55,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/reports/",
+        "status": 200,
+        "navigation_ms": 56,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/qualifications/",
+        "status": 200,
+        "navigation_ms": 68,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/rating/",
+        "status": 200,
+        "navigation_ms": 56,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/training/",
+        "status": 200,
+        "navigation_ms": 36,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/governance/",
+        "status": 200,
+        "navigation_ms": 78,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/development/",
+        "status": 200,
+        "navigation_ms": 106,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/integrations/",
+        "status": 200,
+        "navigation_ms": 89,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/identity/",
+        "status": 200,
+        "navigation_ms": 73,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 360,
+        "route": "/reporting/",
+        "status": 200,
+        "navigation_ms": 78,
+        "viewport": 360,
+        "scrollWidth": 360,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/",
+        "status": 200,
+        "navigation_ms": 98,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/competitions/",
+        "status": 200,
+        "navigation_ms": 36,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/competitions/1/",
+        "status": 200,
+        "navigation_ms": 100,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/registry/",
+        "status": 200,
+        "navigation_ms": 55,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/reports/",
+        "status": 200,
+        "navigation_ms": 53,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/qualifications/",
+        "status": 200,
+        "navigation_ms": 98,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/rating/",
+        "status": 200,
+        "navigation_ms": 54,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/training/",
+        "status": 200,
+        "navigation_ms": 35,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/governance/",
+        "status": 200,
+        "navigation_ms": 75,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/development/",
+        "status": 200,
+        "navigation_ms": 89,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/integrations/",
+        "status": 200,
+        "navigation_ms": 76,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/identity/",
+        "status": 200,
+        "navigation_ms": 73,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 768,
+        "route": "/reporting/",
+        "status": 200,
+        "navigation_ms": 74,
+        "viewport": 768,
+        "scrollWidth": 768,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/",
+        "status": 200,
+        "navigation_ms": 104,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/competitions/",
+        "status": 200,
+        "navigation_ms": 43,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/competitions/1/",
+        "status": 200,
+        "navigation_ms": 111,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/registry/",
+        "status": 200,
+        "navigation_ms": 66,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/reports/",
+        "status": 200,
+        "navigation_ms": 58,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/qualifications/",
+        "status": 200,
+        "navigation_ms": 65,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/rating/",
+        "status": 200,
+        "navigation_ms": 52,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/training/",
+        "status": 200,
+        "navigation_ms": 50,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/governance/",
+        "status": 200,
+        "navigation_ms": 32,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/development/",
+        "status": 200,
+        "navigation_ms": 91,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/integrations/",
+        "status": 200,
+        "navigation_ms": 77,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/identity/",
+        "status": 200,
+        "navigation_ms": 76,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      },
+      {
+        "width": 1280,
+        "route": "/reporting/",
+        "status": 200,
+        "navigation_ms": 79,
+        "viewport": 1280,
+        "scrollWidth": 1280,
+        "offscreenControls": []
+      }
+    ]
+  },
+  "checkpoint_2": {
+    "duration_seconds": 124.88,
+    "bytes": 3941970,
+    "file": "docs/checkpoint-2.mp4"
+  },
+  "reproductions": {
+    "registry_search_result_counts": {
+      "Александр": 1,
+      "александр": 0,
+      "Александр Тестов": 0,
+      "Код Оренбуржья": 0
+    },
+    "judge_dashboard": {
+      "existing_category": "Судья второй категории",
+      "incorrect_absent_message": true
+    },
+    "invalid_plan_accepted": {
+      "is_valid": true,
+      "errors": {}
+    },
+    "census_api_ignores_municipality": {
+      "actual": [
+        {
+          "year": 2025,
+          "total": 25
+        },
+        {
+          "year": 2026,
+          "total": 25
+        }
+      ],
+      "expected": [
+        {
+          "year": 2025,
+          "total": 0
+        },
+        {
+          "year": 2026,
+          "total": 0
+        }
+      ]
+    },
+    "invalid_import_accepted": {
+      "place_submitted": 1.5,
+      "score_submitted": false,
+      "place_saved": 1,
+      "score_saved": "0"
+    }
+  },
+  "data_safety": "State-changing reproductions used an isolated SQLite copy and transaction rollback; main sports/business data was unchanged."
+}

@@ -4,6 +4,8 @@
 
 Исходники: [Markon123/pyton](https://github.com/Markon123/pyton). [Скачать ZIP](https://github.com/Markon123/pyton/archive/refs/heads/main.zip). Это ссылки на код; публичный сайт автоматически не создаётся.
 
+**Состояние по ТЗ:** [аудит от 28.10.2026](docs/tz-audit-2026-10-28.md) выявил ошибки и незакрытые пункты. Базовые сценарии работают и 147 тестов проходят на SQLite/PostgreSQL, но это ещё не полное соответствие ТЗ.
+
 **Чекпоинт № 2:** [видео полного сценария — MP4, 2:05](https://github.com/Markon123/pyton/raw/refs/heads/main/docs/checkpoint-2.mp4), [полученный протокол — PDF](docs/checkpoint-2-protocol.pdf), [порядок демонстрации](docs/checkpoint-2.md). В видео новый турнир проходит путь от создания и заявки отдельного спортсмена до публикации результата в его истории.
 
 ## Самый простой запуск на Windows
