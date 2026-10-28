@@ -14,6 +14,34 @@ from scripts.configure_deployment import create_config
 
 
 class ProductionConfigTests(SimpleTestCase):
+    def test_local_config_has_matching_http_origins_unique_secrets_and_no_shared_password(self):
+        with TemporaryDirectory() as folder:
+            first = create_config(None, Path(folder) / '.env.local', local=True, port=8016)
+            second = create_config(None, Path(folder) / '.env.other', local=True, port=8000)
+            def values(path):
+                return dict(line.split('=', 1) for line in path.read_text().splitlines() if line and not line.startswith('#'))
+            a, b = values(first), values(second)
+            self.assertEqual(a['PUBLIC_BASE_URL'], 'http://localhost:8016')
+            self.assertEqual(a['FSP_PORT'], '8016')
+            self.assertEqual(a['DJANGO_CSRF_TRUSTED_ORIGINS'], 'http://localhost:8016,http://127.0.0.1:8016')
+            self.assertEqual(a['DJANGO_DEBUG'], '1')
+            self.assertEqual(a['TRUST_PROXY_HEADERS'], '0')
+            self.assertEqual(a['FSP_MINISTRY_PASSWORD'], '')
+            self.assertNotEqual(a['DJANGO_SECRET_KEY'], b['DJANGO_SECRET_KEY'])
+            self.assertNotEqual(a['POSTGRES_PASSWORD'], b['POSTGRES_PASSWORD'])
+            with self.assertRaises(FileExistsError):
+                create_config(None, first, local=True)
+
+    def test_invalid_local_ports_and_mixed_mode_do_not_create_file(self):
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / '.env.local'
+            for port in (0, 1023, 65536, True, '8000'):
+                with self.assertRaises(ValueError):
+                    create_config(None, path, local=True, port=port)
+            with self.assertRaises(ValueError):
+                create_config('example.org', path, local=True)
+            self.assertFalse(path.exists())
+
     def test_private_config_is_complete_and_does_not_overwrite(self):
         with TemporaryDirectory() as folder:
             path = Path(folder) / '.env.production'
