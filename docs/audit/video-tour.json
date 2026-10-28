@@ -1,0 +1,244 @@
+{
+  "successful": true,
+  "recording": true,
+  "partial": false,
+  "generatedAt": "2026-10-28T21:18:27.052113+00:00",
+  "sha256": "d8e3a238dbc1cc7f3ea63e964e3ad140161bc5adaaf0c106f665c82014168fe5",
+  "bytes": 19407421,
+  "durationSeconds": 728.0,
+  "sourceSha256": "fe13924e21be473eeecf4beb91d36ba5e79f1be7d23d3ab749b229da52d15781",
+  "sourceDurationSeconds": 728.0,
+  "viewport": {
+    "width": 1440,
+    "height": 960
+  },
+  "codecs": {
+    "video": "h264",
+    "videoTag": "avc1",
+    "pixelFormat": "yuv420p",
+    "audio": "aac",
+    "audioSampleRate": 44100,
+    "audioChannels": 1,
+    "subtitles": "mov_text",
+    "subtitleLanguage": "rus"
+  },
+  "counts": {
+    "chapters": 20,
+    "downloads": 7,
+    "narrationSegments": 79,
+    "subtitleCues": 79,
+    "browserErrors": 0,
+    "serverNavigationErrors": 0
+  },
+  "errors": {
+    "browser": [],
+    "serverNavigation": []
+  },
+  "voice": {
+    "model": "vits-piper-ru_RU-ruslan-medium",
+    "corpus": "RUSLAN",
+    "license": "CC BY-NC-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+    "synthesizedLocally": true,
+    "spokenSeconds": 442.188
+  },
+  "chapters": [
+    {
+      "code": "СТАРТ",
+      "title": "ОренКод · подробная демонстрация",
+      "startSeconds": 0.0,
+      "recordedStartSeconds": 0.73,
+      "endSeconds": 21.02,
+      "time": "00:00"
+    },
+    {
+      "code": "14",
+      "title": "Рейтинг → карточка → сборная",
+      "startSeconds": 21.02,
+      "recordedStartSeconds": 21.02,
+      "endSeconds": 57.19,
+      "time": "00:21"
+    },
+    {
+      "code": "15",
+      "title": "Реестр спортсменов и отчёты",
+      "startSeconds": 57.19,
+      "recordedStartSeconds": 57.19,
+      "endSeconds": 112.49,
+      "time": "00:57"
+    },
+    {
+      "code": "16 / D9",
+      "title": "Кабинет Министерства спорта",
+      "startSeconds": 112.49,
+      "recordedStartSeconds": 112.49,
+      "endSeconds": 172.8,
+      "time": "01:52"
+    },
+    {
+      "code": "D1",
+      "title": "Региональный ФСП ID",
+      "startSeconds": 172.8,
+      "recordedStartSeconds": 172.8,
+      "endSeconds": 227.05,
+      "time": "02:52"
+    },
+    {
+      "code": "D2",
+      "title": "API и интеграции",
+      "startSeconds": 227.05,
+      "recordedStartSeconds": 227.05,
+      "endSeconds": 282.34,
+      "time": "03:47"
+    },
+    {
+      "code": "D3",
+      "title": "Организация, группа и журнал занятий",
+      "startSeconds": 282.34,
+      "recordedStartSeconds": 282.34,
+      "endSeconds": 322.98,
+      "time": "04:42"
+    },
+    {
+      "code": "D4",
+      "title": "Нормативы и аттестация",
+      "startSeconds": 322.98,
+      "recordedStartSeconds": 322.98,
+      "endSeconds": 365.25,
+      "time": "05:22"
+    },
+    {
+      "code": "D5",
+      "title": "Апелляция: от обращения к рассмотрению",
+      "startSeconds": 365.25,
+      "recordedStartSeconds": 365.25,
+      "endSeconds": 395.9,
+      "time": "06:05"
+    },
+    {
+      "code": "D6",
+      "title": "Показатели развития региона",
+      "startSeconds": 395.9,
+      "recordedStartSeconds": 395.9,
+      "endSeconds": 421.16,
+      "time": "06:35"
+    },
+    {
+      "code": "D7",
+      "title": "Личный путь спортсмена",
+      "startSeconds": 421.16,
+      "recordedStartSeconds": 421.16,
+      "endSeconds": 448.77,
+      "time": "07:01"
+    },
+    {
+      "code": "D8",
+      "title": "Премии Губернатора",
+      "startSeconds": 448.77,
+      "recordedStartSeconds": 448.77,
+      "endSeconds": 479.49,
+      "time": "07:28"
+    },
+    {
+      "code": "D10",
+      "title": "Справка об участии с QR-кодом",
+      "startSeconds": 479.49,
+      "recordedStartSeconds": 479.49,
+      "endSeconds": 517.94,
+      "time": "07:59"
+    },
+    {
+      "code": "D11",
+      "title": "Навигатор для новичка",
+      "startSeconds": 517.94,
+      "recordedStartSeconds": 517.94,
+      "endSeconds": 550.44,
+      "time": "08:37"
+    },
+    {
+      "code": "18.1",
+      "title": "Проверка ролей · федерация",
+      "startSeconds": 550.44,
+      "recordedStartSeconds": 550.44,
+      "endSeconds": 591.68,
+      "time": "09:10"
+    },
+    {
+      "code": "18.2",
+      "title": "Проверка ролей · спортсмен",
+      "startSeconds": 591.68,
+      "recordedStartSeconds": 591.68,
+      "endSeconds": 613.79,
+      "time": "09:51"
+    },
+    {
+      "code": "18.3",
+      "title": "Проверка ролей · тренер",
+      "startSeconds": 613.79,
+      "recordedStartSeconds": 613.79,
+      "endSeconds": 638.34,
+      "time": "10:13"
+    },
+    {
+      "code": "18.4 / D12",
+      "title": "Судья · категория и документы",
+      "startSeconds": 638.34,
+      "recordedStartSeconds": 638.34,
+      "endSeconds": 690.58,
+      "time": "10:38"
+    },
+    {
+      "code": "18.5",
+      "title": "Проверка ролей · министерство",
+      "startSeconds": 690.58,
+      "recordedStartSeconds": 690.58,
+      "endSeconds": 712.04,
+      "time": "11:30"
+    },
+    {
+      "code": "ФИНИШ",
+      "title": "ОренКод · запись завершена",
+      "startSeconds": 712.04,
+      "recordedStartSeconds": 712.04,
+      "endSeconds": 728.0,
+      "time": "11:52"
+    }
+  ],
+  "downloads": [
+    {
+      "file": "team.pdf",
+      "bytes": 49074,
+      "sha256": "553c8012b6f65758d68f95146b53e9e183f9829f7692a7a0276df00b7f93e1eb"
+    },
+    {
+      "file": "athlete-count.xlsx",
+      "bytes": 6904,
+      "sha256": "52a9e30d6f1a6de1c4e4525848e58e07fc5f9496deaa74ab7afeda42e62f375f"
+    },
+    {
+      "file": "competition-protocol.pdf",
+      "bytes": 53124,
+      "sha256": "617e202e1dcede0ab46d3667ab40855c855ae7d124d730367c5830a5ceec22b8"
+    },
+    {
+      "file": "athlete-history.pdf",
+      "bytes": 48719,
+      "sha256": "af52b2fcd6cf2d039b3010145fb1cfbe0334b83db71209f8c59d4c99814e5d09"
+    },
+    {
+      "file": "participation-with-qr.pdf",
+      "bytes": 37583,
+      "sha256": "2069612f1998d4fb5beb2c6f6deb72306b39fdfedff5fd9696e5314f17e2e9ab"
+    },
+    {
+      "file": "judging-panel.pdf",
+      "bytes": 49056,
+      "sha256": "398d5c4344a7920a3520c93d5e808b3f1ed27ab22b4bfa7b6d1889053b963c43"
+    },
+    {
+      "file": "judging-history.pdf",
+      "bytes": 48965,
+      "sha256": "7f2794f57f81eed8d1bf324c5164321dca10d137f16f52bc17a7e160d8a5fbcb"
+    }
+  ]
+}
